@@ -105,10 +105,10 @@ exports.login = async (req, res) => {
     // Configuração do cookie para produção (cross-origin)
     const cookieConfig = {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
+      secure: true,
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 dias
       path: "/",
-      sameSite: "lax", // ✅ Pode usar "lax" agora!
+      sameSite: "none", // ← ESSENCIAL para cross-origin
     };
     if (isProduction) {
       res.header("Access-Control-Allow-Credentials", "true");
