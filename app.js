@@ -15,7 +15,11 @@ app.use(
   cors({
     origin: function (origin, callback) {
       if (!origin) return callback(null, true);
-      const allowedOrigins = ["http://127.0.0.1:3000", "http://localhost:3000"];
+      const allowedOrigins = [
+        "http://127.0.0.1:3000",
+        "http://localhost:3000",
+        "https://feelsystem.vercel.app",
+      ];
       if (allowedOrigins.includes(origin)) {
         return callback(null, true);
       }
