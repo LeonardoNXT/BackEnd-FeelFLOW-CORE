@@ -104,11 +104,11 @@ exports.login = async (req, res) => {
 
     // Configuração do cookie para produção (cross-origin)
     const cookieConfig = {
-      httpOnly: false,
-      secure: isProduction,
-      maxAge: 7 * 24 * 60 * 60 * 1000,
+      httpOnly: true,
+      secure: true, // Obrigatório com SameSite=None
+      sameSite: "None",
       path: "/",
-      sameSite: isProduction ? "none" : "lax",
+      maxAge: 1000 * 60 * 60 * 24 * 7, // exemplo: 7 dias
     };
 
     if (isProduction) {
