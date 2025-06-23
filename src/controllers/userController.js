@@ -111,12 +111,12 @@ exports.login = async (req, res) => {
       maxAge: 1000 * 60 * 60 * 24 * 7, // exemplo: 7 dias
     };
 
-    if (isProduction) {
-      res.setHeader("Access-Control-Allow-Credentials", "true");
+    if (isProduction && origin) {
       res.setHeader(
-        "Access-Control-Allow-Origin",
-        "https://feelcore.onrender.com"
+        "Access-Control-Allow-Headers",
+        "Content-Type, Authorization, Cookie"
       );
+      res.setHeader("Access-Control-Allow-Origin", origin);
       res.setHeader("Vary", "Origin");
     }
 
