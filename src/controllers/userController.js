@@ -104,14 +104,20 @@ exports.login = async (req, res) => {
 
     // Configuração do cookie para produção (cross-origin)
     const cookieConfig = {
-      httpOnly: true,
-      secure: true,
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 dias
+      httpOnly: false,
+      secure: isProduction,
+      maxAge: 7 * 24 * 60 * 60 * 1000,
       path: "/",
-      sameSite: "none", // ← ESSENCIAL para cross-origin
+      sameSite: isProduction ? "none" : "lax",
     };
+
     if (isProduction) {
-      res.header("Access-Control-Allow-Credentials", "true");
+      res.setHeader("Access-Control-Allow-Credentials", "true");
+      res.setHeader(
+        "Access-Control-Allow-Origin",
+        "https://feelsystem.vercel.app"
+      );
+      res.setHeader("Vary", "Origin");
     }
 
     res.cookie("token", token, cookieConfig);

@@ -21,6 +21,7 @@ app.use(
       if (!origin) return callback(null, true);
 
       const allowedOrigins = [
+        "http://192.168.1.2:3000",
         "http://127.0.0.1:3000",
         "http://localhost:3000",
         "https://feelsystem.vercel.app", // ✅ Manter para casos diretos
