@@ -92,14 +92,34 @@ exports.login = async (req, res) => {
       expiresIn: "7d",
     });
 
+    // CORREÇÃO: Configuração dinâmica baseada no ambiente
+    const isProduction = process.env.NODE_ENV === "production";
+    const origin = req.get("origin") || req.get("referer");
+    const isHTTPS = origin && origin.startsWith("https://");
+
+    console.log("Environment:", process.env.NODE_ENV);
+    console.log("Origin:", origin);
+    console.log("Is HTTPS:", isHTTPS);
+
     res.cookie("token", token, {
       httpOnly: true,
-      secure: false, // HTTP local
-      maxAge: 7 * 24 * 60 * 60 * 1000,
+      secure: isProduction && isHTTPS, // HTTPS apenas em produção
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 dias
       path: "/",
-      sameSite: "lax", // Permite cookies em mesmo domínio
+      sameSite: isProduction ? "none" : "lax", // "none" para cross-origin em produção
+      domain: isProduction ? undefined : undefined, // deixa o browser decidir
     });
-    return res.status(200).json({ msg: "Autenticação realizada com sucesso." });
+
+    console.log("Cookie set with config:", {
+      secure: isProduction && isHTTPS,
+      sameSite: isProduction ? "none" : "lax",
+    });
+
+    return res.status(200).json({
+      msg: "Autenticação realizada com sucesso.",
+      // Opcional: retornar o token também no body para debug
+      ...(process.env.NODE_ENV === "development" && { token }),
+    });
   } catch (error) {
     console.error(error);
     return res.status(500).json({
