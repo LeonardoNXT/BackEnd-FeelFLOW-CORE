@@ -21,7 +21,7 @@ app.use(
       if (!origin) return callback(null, true);
 
       const allowedOrigins = [
-        "https://feelcore.onrender.com/",
+        "https://feelcore.onrender.com",
         "http://192.168.1.2:3000",
         "feelsystem-hjgdlz7n3-leonardo-da-silva-leals-projects.vercel.app",
         "http://127.0.0.1:3000",
