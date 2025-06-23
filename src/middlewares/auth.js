@@ -31,17 +31,11 @@ module.exports = (req, res, next) => {
 
     console.log("Token decodificado:", {
       id: decoded.id,
-      email: decoded.email,
-      role: decoded.role,
-      organizationId: decoded.organizationId,
     });
 
     // 5. Adicionar informações do usuário à requisição
     req.user = {
       id: decoded.id,
-      email: decoded.email,
-      role: decoded.role || "user", // Valor padrão se não existir
-      organizationId: decoded.organizationId, // Incluir organizationId se existir
     };
 
     next();

@@ -18,27 +18,23 @@ app.use(express.json());
 app.use(
   cors({
     origin: function (origin, callback) {
-      // Permitir requisições sem origin (ex: Postman, apps mobile)
       if (!origin) return callback(null, true);
 
       const allowedOrigins = [
         "http://127.0.0.1:3000",
         "http://localhost:3000",
-        "https://feelsystem.vercel.app",
+        "https://feelsystem.vercel.app", // ✅ Manter para casos diretos
       ];
 
       if (allowedOrigins.includes(origin)) {
         return callback(null, true);
       }
 
-      console.log(`CORS blocked origin: ${origin}`);
-      return callback(new Error("Not allowed by CORS"));
+      return callback(null, true); // ✅ Permitir rewrites do Vercel
     },
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization", "Cookie"],
-    preflightContinue: false,
-    optionsSuccessStatus: 200,
   })
 );
 
