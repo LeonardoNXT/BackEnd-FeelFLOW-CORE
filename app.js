@@ -9,8 +9,12 @@ const cookieParser = require("cookie-parser");
 
 // configuração basica de rotas
 const router = require("./routes");
+
+// IMPORTANTE: A ordem das configurações importa
 app.use(cookieParser());
 app.use(express.json());
+
+// CORS configurado ANTES das rotas
 app.use(
   cors({
     origin: function (origin, callback) {
@@ -21,7 +25,6 @@ app.use(
         "http://127.0.0.1:3000",
         "http://localhost:3000",
         "https://feelsystem.vercel.app",
-        // Adicione outros domínios se necessário
       ];
 
       if (allowedOrigins.includes(origin)) {
@@ -31,17 +34,24 @@ app.use(
       console.log(`CORS blocked origin: ${origin}`);
       return callback(new Error("Not allowed by CORS"));
     },
-    credentials: true, // IMPORTANTE: mantém isso
+    credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization", "Cookie"],
-    // Permite que o browser envie cookies preflight
     preflightContinue: false,
     optionsSuccessStatus: 200,
   })
 );
 
-// Models
+// Rotas DEPOIS do CORS
+app.use(router);
 
+// Verificação das variáveis de ambiente
+if (!process.env.CONNECTIONDB || !process.env.PORT) {
+  console.error("Variáveis de ambiente ausentes. Verifique o arquivo .env.");
+  process.exit(1);
+}
+
+// Conexão com MongoDB
 mongoose
   .connect(process.env.CONNECTIONDB)
   .then(() => {

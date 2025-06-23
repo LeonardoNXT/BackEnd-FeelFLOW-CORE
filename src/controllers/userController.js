@@ -22,6 +22,7 @@ exports.meUser = async (req, res) => {
     return res.status(500).json({ msg: "Erro ao buscar usuário." });
   }
 };
+
 // Registrar novo usuário
 exports.registerUser = async (req, res) => {
   try {
@@ -64,7 +65,7 @@ exports.registerUser = async (req, res) => {
   }
 };
 
-// Login do usuário
+// Login do usuário - VERSÃO CORRIGIDA
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -92,38 +93,95 @@ exports.login = async (req, res) => {
       expiresIn: "7d",
     });
 
-    // CORREÇÃO: Configuração dinâmica baseada no ambiente
+    // Configuração do cookie baseada no ambiente
     const isProduction = process.env.NODE_ENV === "production";
     const origin = req.get("origin") || req.get("referer");
-    const isHTTPS = origin && origin.startsWith("https://");
 
+    console.log("=== LOGIN DEBUG ===");
     console.log("Environment:", process.env.NODE_ENV);
     console.log("Origin:", origin);
-    console.log("Is HTTPS:", isHTTPS);
+    console.log("Is Production:", isProduction);
 
-    res.cookie("token", token, {
+    // Configuração do cookie para produção (cross-origin)
+    const cookieConfig = {
       httpOnly: true,
-      secure: isProduction && isHTTPS, // HTTPS apenas em produção
+      secure: isProduction, // sempre true em produção
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 dias
       path: "/",
-      sameSite: isProduction ? "none" : "lax", // "none" para cross-origin em produção
-      domain: isProduction ? undefined : undefined, // deixa o browser decidir
-    });
+      sameSite: isProduction ? "none" : "lax", // "none" para cross-origin
+    };
 
-    console.log("Cookie set with config:", {
-      secure: isProduction && isHTTPS,
-      sameSite: isProduction ? "none" : "lax",
-    });
+    res.cookie("token", token, cookieConfig);
+
+    console.log("Cookie config:", cookieConfig);
+    console.log("Token generated for user:", business._id);
+    console.log("===================");
 
     return res.status(200).json({
       msg: "Autenticação realizada com sucesso.",
-      // Opcional: retornar o token também no body para debug
-      ...(process.env.NODE_ENV === "development" && { token }),
+      user: {
+        id: business._id,
+        name: business.name,
+        email: business.email,
+      },
     });
   } catch (error) {
-    console.error(error);
+    console.error("Login error:", error);
     return res.status(500).json({
       msg: "Ocorreu um erro no servidor, tente novamente mais tarde!",
+    });
+  }
+};
+
+// ADICIONAR: Controller de verify - ESSENCIAL
+exports.verify = async (req, res) => {
+  try {
+    console.log("=== VERIFY DEBUG ===");
+    console.log("Cookies received:", req.cookies);
+    console.log("Body received:", req.body);
+
+    // Pega o token do body OU dos cookies
+    const token = req.body.token || req.cookies.token;
+
+    if (!token) {
+      console.log("No token provided");
+      return res.status(401).json({ msg: "Token não fornecido." });
+    }
+
+    console.log("Token present:", token ? "YES" : "NO");
+
+    try {
+      // Verifica o token JWT
+      const decoded = jwt.verify(token, process.env.SECRET);
+      console.log("Token decoded:", decoded);
+
+      // Busca o usuário
+      const user = await Organization.findById(decoded.id).select("-password");
+
+      if (!user) {
+        console.log("User not found for ID:", decoded.id);
+        return res.status(404).json({ msg: "Usuário não encontrado." });
+      }
+
+      console.log("User found:", user._id);
+      console.log("====================");
+
+      return res.status(200).json({
+        msg: "Token válido.",
+        user: {
+          _id: user._id,
+          name: user.name,
+          email: user.email,
+        },
+      });
+    } catch (jwtError) {
+      console.error("JWT verification error:", jwtError.message);
+      return res.status(401).json({ msg: "Token inválido ou expirado." });
+    }
+  } catch (error) {
+    console.error("Verify controller error:", error);
+    return res.status(500).json({
+      msg: "Erro interno do servidor.",
     });
   }
 };
