@@ -104,7 +104,7 @@ exports.login = async (req, res) => {
 
     // Configuração do cookie para produção (cross-origin)
     const cookieConfig = {
-      httpOnly: false,
+      httpOnly: true,
       secure: true, // Obrigatório com SameSite=None
       sameSite: "None",
       path: "/",

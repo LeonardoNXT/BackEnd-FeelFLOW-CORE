@@ -317,8 +317,6 @@ const employeesController = {
   // Listar funcionários
   async getEmployees(req, res) {
     try {
-      const { page = 1, limit = 10, status, search } = req.query;
-
       // Verificar se o usuário está autenticado
       if (!req.user || !req.user.id) {
         return res.status(401).json({
@@ -326,38 +324,31 @@ const employeesController = {
         });
       }
 
-      // Construir filtros
-      const filters = {};
-      if (status) filters.status = status;
-      if (search) {
-        filters.$or = [
-          { name: { $regex: search, $options: "i" } },
-          { email: { $regex: search, $options: "i" } },
-          { cpf: { $regex: search.replace(/[^\d]/g, "") } },
-        ];
-      }
+      console.log("Buscando funcionários para o usuário:", req.user.id);
 
-      // CORREÇÃO: Usar sempre o ID do usuário autenticado
-      filters.employee_of = req.user.id;
+      // Buscar todos os funcionários que pertencem ao usuário autenticado
+      const employees = await Employee.find({
+        employee_of: req.user.id,
+      })
+        .select("-password") // Excluir senha dos resultados
+        .populate("employee_of", "name") // Popular dados da organização/usuário
+        .sort({ createdAt: -1 }); // Ordenar por data de criação (mais recente primeiro)
 
-      const employees = await Employee.find(filters)
-        .select("-password") // Excluir senha
-        .populate("employee_of", "name") // Popular organização
-        .limit(limit * 1)
-        .skip((page - 1) * limit)
-        .sort({ createdAt: -1 });
+      console.log(`Encontrados ${employees.length} funcionários`);
 
-      const total = await Employee.countDocuments(filters);
-
+      // Retornar todos os funcionários
       res.json({
         employees,
-        totalPages: Math.ceil(total / limit),
-        currentPage: parseInt(page),
-        total,
+        total: employees.length,
+        message: "Funcionários listados com sucesso",
       });
     } catch (error) {
       console.error("Erro ao listar funcionários:", error);
-      res.status(500).json({ error: "Erro ao buscar funcionários" });
+      res.status(500).json({
+        error: "Erro ao buscar funcionários",
+        details:
+          process.env.NODE_ENV === "development" ? error.message : undefined,
+      });
     }
   },
 
