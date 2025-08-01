@@ -363,7 +363,6 @@ const employeesController = {
         employee_of: req.user.id,
       })
         .select("-password") // Excluir senha dos resultados
-        .populate("employee_of", "name") // Popular dados da organização/usuário
         .sort({ createdAt: -1 }); // Ordenar por data de criação (mais recente primeiro)
 
       console.log(`Encontrados ${employees.length} funcionários`);
