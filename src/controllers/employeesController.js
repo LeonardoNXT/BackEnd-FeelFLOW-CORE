@@ -150,7 +150,7 @@ const employeesController = {
       // Upload do avatar se fornecido
       if (req.file) {
         try {
-          const organizationId = employeeData.employee_of;
+          const organizationId = employeeData.employee_of; // ID da empregado
 
           await Organization.findByIdAndUpdate(
             organizationId,
