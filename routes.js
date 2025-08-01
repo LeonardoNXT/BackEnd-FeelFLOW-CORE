@@ -31,7 +31,7 @@ route.post(
 );
 
 // Listar funcionários
-route.post("/employees", checkToken, employeesController.getEmployees);
+route.get("/employees/all", checkToken, employeesController.getEmployees);
 
 // Buscar funcionário por ID
 route.get("/employees/:id", checkToken, employeesController.getEmployeeById);
