@@ -150,6 +150,19 @@ const employeesController = {
       // Upload do avatar se fornecido
       if (req.file) {
         try {
+          const organizationId = employeeData.employee_of;
+
+          await Organization.findByIdAndUpdate(
+            organizationId,
+            {
+              $addToSet: { employees: savedEmployee._id }, // $addToSet evita duplicatas
+            },
+            { new: true }
+          );
+
+          console.log(
+            `Funcionário ${savedEmployee._id} adicionado à organização ${organizationId}`
+          );
           console.log("Fazendo upload do avatar...");
           const uploadResult = await uploadToCloudinary(req.file.buffer, {
             public_id: `employee_${Date.now()}_${Math.random()
