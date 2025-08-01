@@ -151,19 +151,6 @@ const employeesController = {
       // Upload do avatar se fornecido
       if (req.file) {
         try {
-          const organizationId = employeeData.employee_of; // ID da empregado
-
-          await Organization.findByIdAndUpdate(
-            organizationId,
-            {
-              $addToSet: { employees: savedEmployee._id }, // $addToSet evita duplicatas
-            },
-            { new: true }
-          );
-
-          console.log(
-            `Funcionário ${savedEmployee._id} adicionado à organização ${organizationId}`
-          );
           console.log("Fazendo upload do avatar...");
           const uploadResult = await uploadToCloudinary(req.file.buffer, {
             public_id: `employee_${Date.now()}_${Math.random()
@@ -194,6 +181,37 @@ const employeesController = {
       // Criar funcionário
       const newEmployee = new Employee(employeeData);
       const savedEmployee = await newEmployee.save();
+
+      // AGORA adicionar o funcionário à organização (após salvar o funcionário)
+      try {
+        const organizationId = employeeData.employee_of;
+
+        await Organization.findByIdAndUpdate(
+          organizationId,
+          {
+            $addToSet: { employees: savedEmployee._id }, // $addToSet evita duplicatas
+          },
+          { new: true }
+        );
+
+        console.log(
+          `Funcionário ${savedEmployee._id} adicionado à organização ${organizationId}`
+        );
+      } catch (orgUpdateError) {
+        console.error("Erro ao atualizar organização:", orgUpdateError);
+
+        // Como o funcionário já foi criado, você pode optar por:
+        // 1. Deletar o funcionário e retornar erro
+        // 2. Continuar sem adicionar à organização (e logar o erro)
+        // Aqui vou optar pela opção 1 para manter consistência
+
+        await Employee.findByIdAndDelete(savedEmployee._id);
+
+        return res.status(500).json({
+          error: "Erro ao associar funcionário à organização",
+          details: orgUpdateError.message,
+        });
+      }
 
       // Remover senha da resposta
       const employeeResponse = savedEmployee.toObject();
