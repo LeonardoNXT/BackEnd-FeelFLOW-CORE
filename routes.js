@@ -118,28 +118,28 @@ route.get(
 route.patch(
   "/patients/:id/toggle-status",
   checkToken,
-  patientsController.toggleStatus
+  customersController.toggleStatus
 );
 
 // Buscar pacientes por clínica (apenas admin)
 route.get(
   "/patients/clinic/:clinic_id",
   checkToken,
-  patientsController.getByClinic
+  customersController.getByClinic
 );
 
 // Buscar pacientes por profissional (admin ou próprio profissional)
 route.get(
   "/patients/professional/:professional_id",
   checkToken,
-  patientsController.getByProfessional
+  customersController.getByProfessional
 );
 
 // Adicionar entrada no diário do humor (admin ou próprio paciente)
 route.post(
   "/patients/:id/mood-diary",
   checkToken,
-  patientsController.addMoodEntry
+  customersController.addMoodEntry
 );
 
 // ---- ADM FUNCOES ---- //
