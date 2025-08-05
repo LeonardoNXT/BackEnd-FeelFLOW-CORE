@@ -4,7 +4,7 @@ const checkToken = require("./src/middlewares/auth");
 const userController = require("./src/controllers/userController");
 const iaController = require("./src/controllers/iaController");
 const employeesController = require("./src/controllers/employeesController");
-const patientsController = require("./src/controllers/patientsController");
+const customersController = require("./src/controllers/customersController");
 const { upload, handleMulterError } = require("./src/middlewares/upload");
 
 route.get("/", (req, res) => {
