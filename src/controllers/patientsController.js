@@ -32,7 +32,11 @@ class PatientsController {
   // Criar um novo paciente
   async create(req, res) {
     try {
-      const {
+      console.log("📝 Dados recebidos:", req.body);
+      console.log("📎 Arquivo recebido:", req.file ? "Sim" : "Não");
+
+      // Extrair dados do FormData
+      let {
         name,
         email,
         password,
@@ -51,6 +55,45 @@ class PatientsController {
         patient_of,
         client_of,
       } = req.body;
+
+      // Parse dos campos JSON que vêm como string do FormData
+      try {
+        if (address && typeof address === "string") {
+          address = JSON.parse(address);
+        }
+        if (contacts && typeof contacts === "string") {
+          contacts = JSON.parse(contacts);
+        }
+        if (parents_or_guardians && typeof parents_or_guardians === "string") {
+          parents_or_guardians = JSON.parse(parents_or_guardians);
+        }
+        if (medical_history && typeof medical_history === "string") {
+          medical_history = JSON.parse(medical_history);
+        }
+        if (assessment && typeof assessment === "string") {
+          assessment = JSON.parse(assessment);
+        }
+        if (treatment_objectives && typeof treatment_objectives === "string") {
+          treatment_objectives = JSON.parse(treatment_objectives);
+        }
+        if (disorders && typeof disorders === "string") {
+          disorders = JSON.parse(disorders);
+        }
+      } catch (parseError) {
+        console.error("❌ Erro ao parsear JSON:", parseError);
+        return res.status(400).json({
+          error: "Erro no formato dos dados",
+          details: "Dados JSON inválidos: " + parseError.message,
+        });
+      }
+
+      // Conversões de tipos
+      if (age && typeof age === "string") {
+        age = parseInt(age);
+      }
+      if (is_minor && typeof is_minor === "string") {
+        is_minor = is_minor === "true";
+      }
 
       // Validações básicas
       if (!name || !email || !password || !age || !full_name || !birth_date) {
@@ -133,9 +176,9 @@ class PatientsController {
       console.error("Erro ao criar paciente:", error);
 
       // Se houver erro e um avatar foi enviado, tentar limpar do Cloudinary
-      if (req.file && error.avatar && error.avatar.public_id) {
+      if (req.file && customerData?.avatar?.public_id) {
         try {
-          await cloudinary.uploader.destroy(error.avatar.public_id);
+          await cloudinary.uploader.destroy(customerData.avatar.public_id);
         } catch (cleanupError) {
           console.error("Erro ao limpar avatar do Cloudinary:", cleanupError);
         }
