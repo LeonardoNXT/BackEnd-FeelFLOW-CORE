@@ -109,19 +109,6 @@ const customersController = {
         });
       }
 
-      // Verificar se o funcionário responsável existe e pertence à organização
-      const employee = await Employee.findOne({
-        _id: patient_of,
-        employee_of: req.user.id,
-      });
-
-      if (!employee) {
-        return res.status(400).json({
-          error:
-            "Funcionário responsável não encontrado ou não pertence à sua organização",
-        });
-      }
-
       // Verificar se já existe cliente com mesmo email
       const existingCustomer = await Customer.findOne({
         email: email.toLowerCase(),
