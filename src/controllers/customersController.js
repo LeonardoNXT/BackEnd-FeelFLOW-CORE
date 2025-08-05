@@ -48,20 +48,116 @@ const customersController = {
         age,
         full_name,
         birth_date,
-        address,
+        address: addressRaw,
         profession,
-        contacts,
+        contacts: contactsRaw,
         is_minor = false,
+        parents_or_guardians: parentsRaw,
+        medical_history: medicalHistoryRaw,
+        assessment: assessmentRaw,
+        treatment_objectives: treatmentObjectivesRaw,
+        patient_of,
+        disorders: disordersRaw = [],
+        status = "Ativo",
+      } = req.body;
+
+      console.log("📥 Dados brutos recebidos:", req.body);
+
+      // Parse dos dados JSON que vêm como string do FormData
+      let address,
+        contacts,
         parents_or_guardians,
         medical_history,
         assessment,
         treatment_objectives,
-        patient_of, // ID do funcionário responsável
-        disorders = [],
-        status = "Ativo",
-      } = req.body;
+        disorders;
 
-      console.log("Dados recebidos:", req.body); // Debug
+      try {
+        // Parse do endereço
+        address = addressRaw
+          ? typeof addressRaw === "string"
+            ? JSON.parse(addressRaw)
+            : addressRaw
+          : undefined;
+
+        // Parse dos contatos
+        contacts = contactsRaw
+          ? typeof contactsRaw === "string"
+            ? JSON.parse(contactsRaw)
+            : contactsRaw
+          : undefined;
+
+        // Parse dos pais/responsáveis
+        parents_or_guardians = parentsRaw
+          ? typeof parentsRaw === "string"
+            ? JSON.parse(parentsRaw)
+            : parentsRaw
+          : undefined;
+
+        // Parse do histórico médico
+        medical_history = medicalHistoryRaw
+          ? typeof medicalHistoryRaw === "string"
+            ? JSON.parse(medicalHistoryRaw)
+            : medicalHistoryRaw
+          : undefined;
+
+        // Parse da avaliação
+        assessment = assessmentRaw
+          ? typeof assessmentRaw === "string"
+            ? JSON.parse(assessmentRaw)
+            : assessmentRaw
+          : undefined;
+
+        // Parse dos objetivos do tratamento
+        treatment_objectives = treatmentObjectivesRaw
+          ? typeof treatmentObjectivesRaw === "string"
+            ? JSON.parse(treatmentObjectivesRaw)
+            : treatmentObjectivesRaw
+          : undefined;
+
+        // Parse dos transtornos - ESTE É O PRINCIPAL PROBLEMA
+        disorders = disordersRaw
+          ? typeof disordersRaw === "string"
+            ? JSON.parse(disordersRaw)
+            : disordersRaw
+          : [];
+
+        // Garantir que disorders seja sempre um array
+        if (!Array.isArray(disorders)) {
+          disorders = disorders ? [disorders] : [];
+        }
+
+        console.log("✅ Dados parseados:", {
+          address,
+          contacts,
+          medical_history: medical_history ? "Parseado" : "Não fornecido",
+          assessment: assessment ? "Parseado" : "Não fornecido",
+          treatment_objectives: treatment_objectives
+            ? "Parseado"
+            : "Não fornecido",
+          disorders: disorders,
+          disordersLength: disorders.length,
+        });
+      } catch (parseError) {
+        console.error("❌ Erro ao fazer parse dos dados JSON:", parseError);
+        return res.status(400).json({
+          error: "Erro ao processar dados JSON",
+          details: parseError.message,
+          problematic_field: parseError.message.includes("address")
+            ? "address"
+            : parseError.message.includes("contacts")
+            ? "contacts"
+            : parseError.message.includes("disorders")
+            ? "disorders"
+            : parseError.message.includes("medical_history")
+            ? "medical_history"
+            : parseError.message.includes("assessment")
+            ? "assessment"
+            : parseError.message.includes("treatment_objectives")
+            ? "treatment_objectives"
+            : "unknown",
+        });
+      }
 
       // Validações básicas obrigatórias
       if (
@@ -135,23 +231,30 @@ const customersController = {
         address,
         profession,
         contacts,
-        is_minor,
+        is_minor: is_minor === "true" || is_minor === true, // Parse boolean
         parents_or_guardians,
         medical_history,
         assessment,
         treatment_objectives,
         patient_of,
-        client_of: req.user.id, // Sempre usar o ID do usuário autenticado
-        disorders: Array.isArray(disorders) ? disorders : [],
+        client_of: req.user.id,
+        disorders: disorders, // Agora garantidamente um array
         status,
         appointments: [],
         mood_diary: [],
       };
 
+      console.log("📋 Dados finais do cliente:", {
+        ...customerData,
+        password: "[HIDDEN]",
+        disorders: customerData.disorders,
+        disordersCount: customerData.disorders?.length || 0,
+      });
+
       // Upload do avatar se fornecido
       if (req.file) {
         try {
-          console.log("Fazendo upload do avatar...");
+          console.log("📸 Fazendo upload do avatar...");
           const uploadResult = await uploadToCloudinary(req.file.buffer, {
             public_id: `customer_${Date.now()}_${Math.random()
               .toString(36)
@@ -163,9 +266,12 @@ const customersController = {
             public_id: uploadResult.public_id,
           };
 
-          console.log("Upload do avatar concluído:", uploadResult.secure_url);
+          console.log(
+            "✅ Upload do avatar concluído:",
+            uploadResult.secure_url
+          );
         } catch (uploadError) {
-          console.error("Erro no upload do avatar:", uploadError);
+          console.error("❌ Erro no upload do avatar:", uploadError);
           return res.status(500).json({
             error: "Erro ao fazer upload da imagem",
             details: uploadError.message,
@@ -173,30 +279,31 @@ const customersController = {
         }
       }
 
-      console.log("Dados do cliente preparados:", {
-        ...customerData,
-        password: "[HIDDEN]", // Não mostrar a senha no log
-      });
-
       // Criar cliente
       const newCustomer = new Customer(customerData);
       const savedCustomer = await newCustomer.save();
+
+      console.log("✅ Cliente salvo no banco:", {
+        id: savedCustomer._id,
+        disorders: savedCustomer.disorders,
+        disordersCount: savedCustomer.disorders?.length || 0,
+      });
 
       // Adicionar cliente à lista de pacientes do funcionário
       try {
         await Employee.findByIdAndUpdate(
           patient_of,
           {
-            $addToSet: { patients: savedCustomer._id }, // $addToSet evita duplicatas
+            $addToSet: { patients: savedCustomer._id },
           },
           { new: true }
         );
 
         console.log(
-          `Cliente ${savedCustomer._id} adicionado ao funcionário ${patient_of}`
+          `✅ Cliente ${savedCustomer._id} adicionado ao funcionário ${patient_of}`
         );
       } catch (empUpdateError) {
-        console.error("Erro ao atualizar funcionário:", empUpdateError);
+        console.error("❌ Erro ao atualizar funcionário:", empUpdateError);
 
         // Deletar o cliente criado para manter consistência
         await Customer.findByIdAndDelete(savedCustomer._id);
@@ -211,7 +318,12 @@ const customersController = {
       const customerResponse = savedCustomer.toObject();
       delete customerResponse.password;
 
-      console.log("Cliente criado com sucesso:", customerResponse);
+      console.log("🎉 Cliente criado com sucesso:", {
+        id: customerResponse._id,
+        name: customerResponse.name,
+        disorders: customerResponse.disorders,
+        disordersCount: customerResponse.disorders?.length || 0,
+      });
 
       // Gerar token JWT para o novo cliente
       const token = jwt.sign(
@@ -232,14 +344,14 @@ const customersController = {
         token,
       });
     } catch (error) {
-      console.error("Erro ao criar cliente:", error);
+      console.error("❌ Erro ao criar cliente:", error);
 
       // Se houve erro após upload, limpar imagem do Cloudinary
       if (req.uploadedPublicId) {
         try {
           await cloudinary.uploader.destroy(req.uploadedPublicId);
         } catch (cleanupError) {
-          console.error("Erro ao limpar imagem:", cleanupError);
+          console.error("❌ Erro ao limpar imagem:", cleanupError);
         }
       }
 
