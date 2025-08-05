@@ -1,6 +1,32 @@
 const Customer = require("../models/Customer");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const cloudinary = require("cloudinary").v2;
+
+// Função para fazer upload no Cloudinary
+const uploadToCloudinary = (buffer, options = {}) => {
+  return new Promise((resolve, reject) => {
+    const uploadOptions = {
+      resource_type: "image",
+      folder: "customers/avatars", // Pasta específica para customers
+      transformation: [
+        { width: 400, height: 400, crop: "fill", gravity: "face" },
+        { quality: "auto", fetch_format: "auto" },
+      ],
+      ...options,
+    };
+
+    cloudinary.uploader
+      .upload_stream(uploadOptions, (error, result) => {
+        if (error) {
+          reject(error);
+        } else {
+          resolve(result);
+        }
+      })
+      .end(buffer);
+  });
+};
 
 class PatientsController {
   // Criar um novo paciente
@@ -26,6 +52,15 @@ class PatientsController {
         client_of,
       } = req.body;
 
+      // Validações básicas
+      if (!name || !email || !password || !age || !full_name || !birth_date) {
+        return res.status(400).json({
+          error: "Campos obrigatórios não preenchidos",
+          details:
+            "name, email, password, age, full_name e birth_date são obrigatórios",
+        });
+      }
+
       // Verificar se o email já existe
       const existingPatient = await Customer.findOne({ email });
       if (existingPatient) {
@@ -39,27 +74,51 @@ class PatientsController {
       const saltRounds = 10;
       const hashedPassword = await bcrypt.hash(password, saltRounds);
 
-      // Criar o paciente
-      const newPatient = new Customer({
+      // Preparar dados do paciente
+      const customerData = {
         name,
         email,
         password: hashedPassword,
         age,
         full_name,
-        birth_date,
-        address,
-        profession,
-        contacts,
-        is_minor,
-        parents_or_guardians,
-        medical_history,
-        assessment,
-        treatment_objectives,
-        disorders,
+        birth_date: new Date(birth_date),
         patient_of,
         client_of,
-      });
+      };
 
+      // Campos opcionais - adicionar apenas se fornecidos
+      if (address) customerData.address = address;
+      if (profession) customerData.profession = profession;
+      if (contacts) customerData.contacts = contacts;
+      if (is_minor !== undefined) customerData.is_minor = is_minor;
+      if (parents_or_guardians)
+        customerData.parents_or_guardians = parents_or_guardians;
+      if (medical_history) customerData.medical_history = medical_history;
+      if (assessment) customerData.assessment = assessment;
+      if (treatment_objectives)
+        customerData.treatment_objectives = treatment_objectives;
+      if (disorders && Array.isArray(disorders))
+        customerData.disorders = disorders;
+
+      // Processar upload do avatar se fornecido
+      if (req.file) {
+        try {
+          const uploadResult = await uploadToCloudinary(req.file.buffer);
+          customerData.avatar = {
+            url: uploadResult.secure_url,
+            public_id: uploadResult.public_id,
+          };
+        } catch (uploadError) {
+          console.error("Erro no upload do avatar:", uploadError);
+          return res.status(400).json({
+            error: "Erro no upload do avatar",
+            details: uploadError.message,
+          });
+        }
+      }
+
+      // Criar o paciente
+      const newPatient = new Customer(customerData);
       const savedPatient = await newPatient.save();
 
       // Remover a senha da resposta
@@ -72,6 +131,16 @@ class PatientsController {
       });
     } catch (error) {
       console.error("Erro ao criar paciente:", error);
+
+      // Se houver erro e um avatar foi enviado, tentar limpar do Cloudinary
+      if (req.file && error.avatar && error.avatar.public_id) {
+        try {
+          await cloudinary.uploader.destroy(error.avatar.public_id);
+        } catch (cleanupError) {
+          console.error("Erro ao limpar avatar do Cloudinary:", cleanupError);
+        }
+      }
+
       res.status(500).json({
         error: "Erro interno do servidor",
         details: error.message,

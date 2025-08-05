@@ -19,6 +19,16 @@ const customerSchema = new mongoose.Schema(
       required: true,
       select: false,
     },
+    avatar: {
+      url: {
+        type: String,
+        required: false,
+      },
+      public_id: {
+        type: String,
+        required: false,
+      },
+    },
     age: {
       type: Number,
       required: true,
