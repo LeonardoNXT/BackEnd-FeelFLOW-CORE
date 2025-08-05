@@ -57,20 +57,62 @@ route.patch(
 
 // ---- PACIENTES ---- //
 
-// Criar novo paciente (apenas admin)
-route.post("/patients", checkToken, patientsController.create);
+// Criar novo cliente
+route.post(
+  "/customers",
+  checkToken,
+  upload.single("avatar"),
+  handleMulterError,
+  customersController.createCustomer
+);
 
-// Listar todos os pacientes (apenas admin)
-route.post("/patients/all", checkToken, patientsController.getAll);
+// Listar todos os clientes
+route.get("/customers", checkToken, customersController.getCustomers);
 
-// Buscar paciente por ID (admin ou próprio paciente)
-route.get("/patients/:id", checkToken, patientsController.getById);
+// Buscar cliente por ID
+route.get("/customers/:id", checkToken, customersController.getCustomerById);
 
-// Atualizar paciente (apenas admin)
-route.put("/patients/:id", checkToken, patientsController.update);
+// Atualizar cliente
+route.put(
+  "/customers/:id",
+  checkToken,
+  upload.single("avatar"),
+  handleMulterError,
+  customersController.updateCustomer
+);
 
-// Deletar paciente (apenas admin)
-route.delete("/patients/:id", checkToken, patientsController.delete);
+// Deletar cliente
+route.delete("/customers/:id", checkToken, customersController.deleteCustomer);
+
+// Alterar status do cliente (Ativo/Inativo)
+route.patch(
+  "/customers/:id/status",
+  checkToken,
+  customersController.toggleCustomerStatus
+);
+
+// Atualizar senha do cliente
+route.patch(
+  "/customers/:id/password",
+  checkToken,
+  customersController.updateCustomerPassword
+);
+
+// === ROTAS ESPECÍFICAS PARA DIÁRIO DE HUMOR ===
+
+// Adicionar entrada no diário de humor
+route.post(
+  "/customers/:id/mood-diary",
+  checkToken,
+  customersController.addMoodEntry
+);
+
+// Obter diário de humor do cliente
+route.get(
+  "/customers/:id/mood-diary",
+  checkToken,
+  customersController.getMoodDiary
+);
 
 // Ativar/Desativar paciente (apenas admin)
 route.patch(
