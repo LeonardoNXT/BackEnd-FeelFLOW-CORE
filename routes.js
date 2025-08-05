@@ -4,6 +4,7 @@ const checkToken = require("./src/middlewares/auth");
 const userController = require("./src/controllers/userController");
 const iaController = require("./src/controllers/iaController");
 const employeesController = require("./src/controllers/employeesController");
+const patientsController = require("./src/controllers/patientsController");
 const { upload, handleMulterError } = require("./src/middlewares/upload");
 
 route.get("/", (req, res) => {
@@ -52,6 +53,58 @@ route.patch(
   "/employees/:id/status",
   checkToken,
   employeesController.toggleEmployeeStatus
+);
+
+// ---- PACIENTES ---- //
+
+// Criar novo paciente (apenas admin)
+router.post("/patients", checkToken, checkAdmin, patientsController.create);
+
+// Listar todos os pacientes (apenas admin)
+router.post("/patients/all", checkToken, checkAdmin, patientsController.getAll);
+
+// Buscar paciente por ID (admin ou próprio paciente)
+router.get("/patients/:id", checkToken, patientsController.getById);
+
+// Atualizar paciente (apenas admin)
+router.put("/patients/:id", checkToken, checkAdmin, patientsController.update);
+
+// Deletar paciente (apenas admin)
+router.delete(
+  "/patients/:id",
+  checkToken,
+  checkAdmin,
+  patientsController.delete
+);
+
+// Ativar/Desativar paciente (apenas admin)
+router.patch(
+  "/patients/:id/toggle-status",
+  checkToken,
+  checkAdmin,
+  patientsController.toggleStatus
+);
+
+// Buscar pacientes por clínica (apenas admin)
+router.get(
+  "/patients/clinic/:clinic_id",
+  checkToken,
+  checkAdmin,
+  patientsController.getByClinic
+);
+
+// Buscar pacientes por profissional (admin ou próprio profissional)
+router.get(
+  "/patients/professional/:professional_id",
+  checkToken,
+  patientsController.getByProfessional
+);
+
+// Adicionar entrada no diário do humor (admin ou próprio paciente)
+router.post(
+  "/patients/:id/mood-diary",
+  checkToken,
+  patientsController.addMoodEntry
 );
 
 // ---- ADM FUNCOES ---- //
