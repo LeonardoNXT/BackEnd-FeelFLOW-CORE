@@ -55,7 +55,7 @@ route.patch(
   employeesController.toggleEmployeeStatus
 );
 
-// ---- PACIENTES ---- //
+// ---- PACIENTES/CLIENTES ---- //
 
 // Criar novo cliente
 route.post(
@@ -98,8 +98,6 @@ route.patch(
   customersController.updateCustomerPassword
 );
 
-// === ROTAS ESPECÍFICAS PARA DIÁRIO DE HUMOR ===
-
 // Adicionar entrada no diário de humor
 route.post(
   "/customers/:id/mood-diary",
@@ -112,34 +110,6 @@ route.get(
   "/customers/:id/mood-diary",
   checkToken,
   customersController.getMoodDiary
-);
-
-// Ativar/Desativar paciente (apenas admin)
-route.patch(
-  "/patients/:id/toggle-status",
-  checkToken,
-  customersController.toggleStatus
-);
-
-// Buscar pacientes por clínica (apenas admin)
-route.get(
-  "/patients/clinic/:clinic_id",
-  checkToken,
-  customersController.getByClinic
-);
-
-// Buscar pacientes por profissional (admin ou próprio profissional)
-route.get(
-  "/patients/professional/:professional_id",
-  checkToken,
-  customersController.getByProfessional
-);
-
-// Adicionar entrada no diário do humor (admin ou próprio paciente)
-route.post(
-  "/patients/:id/mood-diary",
-  checkToken,
-  customersController.addMoodEntry
 );
 
 // ---- ADM FUNCOES ---- //
