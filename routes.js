@@ -58,50 +58,43 @@ route.patch(
 // ---- PACIENTES ---- //
 
 // Criar novo paciente (apenas admin)
-router.post("/patients", checkToken, checkAdmin, patientsController.create);
+route.post("/patients", checkToken, patientsController.create);
 
 // Listar todos os pacientes (apenas admin)
-router.post("/patients/all", checkToken, checkAdmin, patientsController.getAll);
+route.post("/patients/all", checkToken, patientsController.getAll);
 
 // Buscar paciente por ID (admin ou próprio paciente)
-router.get("/patients/:id", checkToken, patientsController.getById);
+route.get("/patients/:id", checkToken, patientsController.getById);
 
 // Atualizar paciente (apenas admin)
-router.put("/patients/:id", checkToken, checkAdmin, patientsController.update);
+route.put("/patients/:id", checkToken, patientsController.update);
 
 // Deletar paciente (apenas admin)
-router.delete(
-  "/patients/:id",
-  checkToken,
-  checkAdmin,
-  patientsController.delete
-);
+route.delete("/patients/:id", checkToken, patientsController.delete);
 
 // Ativar/Desativar paciente (apenas admin)
-router.patch(
+route.patch(
   "/patients/:id/toggle-status",
   checkToken,
-  checkAdmin,
   patientsController.toggleStatus
 );
 
 // Buscar pacientes por clínica (apenas admin)
-router.get(
+route.get(
   "/patients/clinic/:clinic_id",
   checkToken,
-  checkAdmin,
   patientsController.getByClinic
 );
 
 // Buscar pacientes por profissional (admin ou próprio profissional)
-router.get(
+route.get(
   "/patients/professional/:professional_id",
   checkToken,
   patientsController.getByProfessional
 );
 
 // Adicionar entrada no diário do humor (admin ou próprio paciente)
-router.post(
+route.post(
   "/patients/:id/mood-diary",
   checkToken,
   patientsController.addMoodEntry
