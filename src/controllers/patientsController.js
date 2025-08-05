@@ -31,6 +31,8 @@ const uploadToCloudinary = (buffer, options = {}) => {
 class PatientsController {
   // Criar um novo paciente
   async create(req, res) {
+    let uploadedPublicId = null; // Variável para controlar limpeza
+
     try {
       console.log("📝 Dados recebidos:", req.body);
       console.log("📎 Arquivo recebido:", req.file ? "Sim" : "Não");
@@ -146,15 +148,25 @@ class PatientsController {
       // Processar upload do avatar se fornecido
       if (req.file) {
         try {
-          const uploadResult = await uploadToCloudinary(req.file.buffer);
+          console.log("Fazendo upload do avatar...");
+          const uploadResult = await uploadToCloudinary(req.file.buffer, {
+            public_id: `customer_${Date.now()}_${Math.random()
+              .toString(36)
+              .substr(2, 9)}`,
+          });
+
           customerData.avatar = {
             url: uploadResult.secure_url,
             public_id: uploadResult.public_id,
           };
+
+          uploadedPublicId = uploadResult.public_id; // Salvar para possível limpeza
+
+          console.log("Upload do avatar concluído:", uploadResult.secure_url);
         } catch (uploadError) {
           console.error("Erro no upload do avatar:", uploadError);
-          return res.status(400).json({
-            error: "Erro no upload do avatar",
+          return res.status(500).json({
+            error: "Erro ao fazer upload da imagem",
             details: uploadError.message,
           });
         }
@@ -175,18 +187,40 @@ class PatientsController {
     } catch (error) {
       console.error("Erro ao criar paciente:", error);
 
-      // Se houver erro e um avatar foi enviado, tentar limpar do Cloudinary
-      if (req.file && customerData?.avatar?.public_id) {
+      // Se houve erro após upload, limpar imagem do Cloudinary
+      if (uploadedPublicId) {
         try {
-          await cloudinary.uploader.destroy(customerData.avatar.public_id);
+          await cloudinary.uploader.destroy(uploadedPublicId);
+          console.log("Avatar removido do Cloudinary:", uploadedPublicId);
         } catch (cleanupError) {
           console.error("Erro ao limpar avatar do Cloudinary:", cleanupError);
         }
       }
 
+      // Tratamento de erros específicos do MySQL/MongoDB
+      if (error.name === "ValidationError") {
+        const validationErrors = Object.values(error.errors).map(
+          (err) => err.message
+        );
+        return res.status(400).json({
+          error: "Dados inválidos",
+          details: validationErrors,
+        });
+      }
+
+      if (error.code === 11000) {
+        const field = Object.keys(error.keyPattern)[0];
+        return res.status(409).json({
+          error: `Já existe um registro com este ${field}`,
+        });
+      }
+
       res.status(500).json({
         error: "Erro interno do servidor",
-        details: error.message,
+        message:
+          process.env.NODE_ENV === "development"
+            ? error.message
+            : "Erro ao processar solicitação",
       });
     }
   }
