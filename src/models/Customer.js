@@ -29,16 +29,8 @@ const customerSchema = new mongoose.Schema(
         required: false,
       },
     },
-    age: {
-      type: Number,
-      required: true,
-    },
 
     // === IDENTIFICAÇÃO COMPLETA DO PACIENTE ===
-    full_name: {
-      type: String,
-      required: true,
-    },
     birth_date: {
       type: Date,
       required: true,

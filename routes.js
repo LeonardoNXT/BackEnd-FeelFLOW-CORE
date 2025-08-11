@@ -35,7 +35,7 @@ route.post(
 route.post("/employees/all", checkToken, employeesController.getEmployees);
 
 // Buscar funcionário por ID
-route.get("/employees/:id", checkToken, employeesController.getEmployeeById);
+route.post("/employees/:id", checkToken, employeesController.getEmployeeById);
 
 // Atualizar funcionário
 route.put(
