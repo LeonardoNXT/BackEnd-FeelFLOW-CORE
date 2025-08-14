@@ -72,7 +72,7 @@ const customersController = {
       }
 
       // Validar formato do email
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/; // regex de email pego no github ---
       if (!emailRegex.test(email)) {
         return res.status(400).json({
           error: "Formato de email inválido",
@@ -156,6 +156,17 @@ const customersController = {
           { new: true }
         );
 
+        // Adiciona O Paciente ao custumers da organizacao
+        await Organization.findByIdAndUpdate(
+          custumers,
+          {
+            $addToSet: { custumer: savedCustomer._id },
+          },
+          {
+            new: true,
+          }
+        );
+
         console.log(
           `✅ Cliente ${savedCustomer._id} adicionado ao funcionário ${patient_of}`
         );
@@ -180,23 +191,9 @@ const customersController = {
         name: customerResponse.name,
       });
 
-      // Gerar token JWT para o novo cliente
-      const token = jwt.sign(
-        {
-          customerId: savedCustomer._id,
-          email: savedCustomer.email,
-          id: savedCustomer._id,
-          role: "customer",
-          organizationId: savedCustomer.client_of,
-        },
-        process.env.SECRET,
-        { expiresIn: "24h" }
-      );
-
       res.status(201).json({
         message: "Cliente criado com sucesso",
         customer: customerResponse,
-        token,
       });
     } catch (error) {
       console.error("❌ Erro ao criar cliente:", error);
