@@ -80,7 +80,6 @@ route.patch(
 route.post(
   "/customers",
   checkToken,
-  authorize("adm"),
   upload.single("avatar"),
   handleMulterError,
   customersController.createCustomer
@@ -95,7 +94,12 @@ route.get(
 );
 
 // Buscar cliente por ID
-route.post("/customers/:id", checkToken, customersController.getCustomerById);
+route.post(
+  "/customers/:id",
+  checkToken,
+  authorize("adm", "employee", "patient"),
+  customersController.getCustomerById
+);
 
 // Atualizar cliente
 route.put(

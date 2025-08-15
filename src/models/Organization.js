@@ -28,7 +28,7 @@ const organizationSchema = new mongoose.Schema(
     customers: [
       {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "Customer",
+        ref: "Custumer",
       },
     ],
   },

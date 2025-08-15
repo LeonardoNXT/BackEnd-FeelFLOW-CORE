@@ -158,9 +158,9 @@ const customersController = {
 
         // Adiciona O Paciente ao custumers da organizacao
         await Organization.findByIdAndUpdate(
-          custumers,
+          customers,
           {
-            $addToSet: { custumers: savedCustomer._id },
+            $addToSet: { customers: savedCustomer._id },
           },
           {
             new: true,
