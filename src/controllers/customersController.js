@@ -149,7 +149,7 @@ const customersController = {
       // Adicionar cliente à lista de pacientes do funcionário
       try {
         await Employee.findByIdAndUpdate(
-          patient_of,
+          patient_of, // pega o id do funcionario
           {
             $addToSet: { patients: savedCustomer._id },
           },
@@ -158,7 +158,7 @@ const customersController = {
 
         // Adiciona O Paciente ao custumers da organizacao
         await Organization.findByIdAndUpdate(
-          req.user.id,
+          req.user.id, // id do adm
           {
             $addToSet: { customers: savedCustomer._id },
           },
