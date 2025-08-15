@@ -74,6 +74,13 @@ route.patch(
   employeesController.toggleEmployeeStatus
 );
 
+route.post(
+  "/employees/hirings",
+  authorize("adm", "employee"),
+  checkToken,
+  employeesController.HiringEmployees
+);
+
 // ---- PACIENTES/CLIENTES ---- //
 
 // Criar novo cliente

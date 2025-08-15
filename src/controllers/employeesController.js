@@ -374,7 +374,6 @@ const employeesController = {
       const employees = await Employee.find(filter)
         .select(selectContent || "-password") // conteudo mudo de acordo com o role
         .sort({ createdAt: -1 });
-
       let ativos = 0;
       let inativos = 0;
       employees.forEach((e) => {
@@ -609,6 +608,69 @@ const employeesController = {
     } catch (error) {
       console.error("Erro ao alterar status do funcionário:", error);
       res.status(500).json({ error: "Erro ao alterar status do funcionário" });
+    }
+  },
+  async HiringEmployees(req, res) {
+    try {
+      const userId = req.user.id;
+      const userRole = req.user.role;
+
+      // Verifica se é admin ou employee autorizado
+      if (!["adm", "employee"].includes(userRole)) {
+        return res.status(400).json({
+          error: "Acesso negado",
+          message: "Usuário não autorizado para esta operação",
+        });
+      }
+      const findMethod = {};
+      if (userRole == "adm") {
+        findMethod = {
+          employee_of: userId,
+        };
+      } else if (userRole == "employee") {
+        const employee = await Employee.findById(userId);
+        if (!employee) {
+          return res.status(404).json({
+            error: "Acesso Negado",
+            message: "O usuário autenticado está incorreto",
+          });
+        }
+        const idOrganization = employee.employee_of;
+        findMethod = {
+          employee_of: idOrganization,
+        };
+      }
+      const employees = await Employee.find(findMethod);
+
+      // Agrupa os employees por data de criação
+      const hiringStats = {};
+
+      employees.forEach((employee) => {
+        // Extrai apenas a data (YYYY-MM-DD) do createdAt
+        const date = employee.createdAt.toISOString().split("T")[0];
+
+        if (hiringStats[date]) {
+          hiringStats[date]++;
+        } else {
+          hiringStats[date] = 1;
+        }
+      });
+
+      // Converte o objeto em array no formato desejado
+      const result = Object.keys(hiringStats)
+        .sort() // Ordena as datas
+        .map((date) => ({
+          date: date,
+          quantidade: hiringStats[date],
+        }));
+
+      return res.status(200).json(result);
+    } catch (error) {
+      console.error("Erro ao buscar estatísticas de contratação:", error);
+      return res.status(500).json({
+        error: "Erro interno do servidor",
+        message: error.message,
+      });
     }
   },
 };
