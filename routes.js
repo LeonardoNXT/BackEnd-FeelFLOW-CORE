@@ -1,6 +1,7 @@
 const express = require("express");
 const route = express.Router();
 const checkToken = require("./src/middlewares/auth");
+const authorize = require("./src/middlewares/authorize");
 const userController = require("./src/controllers/userController");
 const iaController = require("./src/controllers/iaController");
 const employeesController = require("./src/controllers/employeesController");
@@ -27,30 +28,48 @@ route.post("/auth/verify", checkToken, userController.meUser);
 route.post(
   "/employees",
   checkToken,
+  authorize("adm"),
   upload.single("avatar"),
   employeesController.createEmployee
 );
 
 // Listar funcionários
-route.post("/employees/all", checkToken, employeesController.getEmployees);
+route.post(
+  "/employees/all",
+  checkToken,
+  authorize("adm"),
+  employeesController.getEmployees
+);
 
 // Buscar funcionário por ID
-route.post("/employees/:id", checkToken, employeesController.getEmployeeById);
+route.post(
+  "/employees/:id",
+  checkToken,
+  authorize("adm"),
+  employeesController.getEmployeeById
+);
 
 // Atualizar funcionário
 route.put(
   "/employees/:id",
   checkToken,
+  authorize("adm"),
   upload.single("avatar"),
   employeesController.updateEmployee
 );
 
 // Deletar funcionário
-route.delete("/employees/:id", checkToken, employeesController.deleteEmployee);
+route.delete(
+  "/employees/:id",
+  checkToken,
+  authorize("adm"),
+  employeesController.deleteEmployee
+);
 
 // Alterar status do funcionário
 route.patch(
   "/employees/:id/status",
+  authorize("adm"),
   checkToken,
   employeesController.toggleEmployeeStatus
 );
@@ -61,33 +80,52 @@ route.patch(
 route.post(
   "/customers",
   checkToken,
+  authorize("adm"),
   upload.single("avatar"),
   handleMulterError,
   customersController.createCustomer
 );
 
 // Listar todos os clientes
-route.get("/customers", checkToken, customersController.getCustomers);
+route.get(
+  "/customers",
+  checkToken,
+  authorize("adm"),
+  customersController.getCustomers
+);
 
 // Buscar cliente por ID
+route.post(
+  "/customers",
+  checkToken,
+  authorize("adm", "employee"),
+  customersController.getCustomers
+);
 route.get("/customers/:id", checkToken, customersController.getCustomerById);
 
 // Atualizar cliente
 route.put(
   "/customers/:id",
   checkToken,
+  authorize("adm"), // vai editar cadastro basico - não ficha anamnese.
   upload.single("avatar"),
   handleMulterError,
   customersController.updateCustomer
 );
 
 // Deletar cliente
-route.delete("/customers/:id", checkToken, customersController.deleteCustomer);
+route.delete(
+  "/customers/:id",
+  checkToken,
+  authorize("adm"),
+  customersController.deleteCustomer
+);
 
 // Alterar status do cliente (Ativo/Inativo)
 route.patch(
   "/customers/:id/status",
   checkToken,
+  authorize("adm"),
   customersController.toggleCustomerStatus
 );
 
@@ -95,6 +133,7 @@ route.patch(
 route.patch(
   "/customers/:id/password",
   checkToken,
+  authorize("adm", "patient"),
   customersController.updateCustomerPassword
 );
 
@@ -102,6 +141,7 @@ route.patch(
 route.post(
   "/customers/:id/mood-diary",
   checkToken,
+  authorize("patient"),
   customersController.addMoodEntry
 );
 
@@ -109,6 +149,7 @@ route.post(
 route.get(
   "/customers/:id/mood-diary",
   checkToken,
+  authorize("adm", "employee"),
   customersController.getMoodDiary
 );
 

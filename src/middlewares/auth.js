@@ -24,7 +24,7 @@ module.exports = async (req, res, next) => {
 
     const decoded = jwt.verify(token, secret);
 
-    let role = "paciente"; // padrão
+    let role = "patient"; // padrão
     if (await Organization.findById(decoded.id)) {
       role = "adm";
     } else if (await Employees.findById(decoded.id)) {
