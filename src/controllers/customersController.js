@@ -4,7 +4,7 @@ const cloudinary = require("cloudinary").v2;
 const Customer = require("../models/Customer");
 const Employee = require("../models/Employee");
 const Organization = require("../models/Organization");
-require("./models/Appointment");
+require("../models/Appointments");
 
 // Configuração do Cloudinary
 cloudinary.config({
