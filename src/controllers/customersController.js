@@ -4,6 +4,7 @@ const cloudinary = require("cloudinary").v2;
 const Customer = require("../models/Customer");
 const Employee = require("../models/Employee");
 const Organization = require("../models/Organization");
+require("./models/Appointment");
 
 // Configuração do Cloudinary
 cloudinary.config({
@@ -356,23 +357,42 @@ const customersController = {
       }
 
       // Buscar apenas clientes que pertencem ao usuário autenticado
-      const customer = await Customer.findOne({
-        _id: id,
-        client_of: req.user.id, // Garantir que o cliente pertence ao usuário
-      })
-        .select("-password")
-        .populate("patient_of", "name email")
-        .populate("client_of", "name")
-        .populate("appointments");
+      if (req.role == "adm") {
+        const customer = await Customer.findOne({
+          _id: id,
+          client_of: req.user.id,
+        })
+          .select("-password")
+          .populate("patient_of", "name email")
+          .populate("client_of", "name")
+          .populate("appointments");
 
-      if (!customer) {
-        return res.status(404).json({
-          error:
-            "Cliente não encontrado ou você não tem permissão para acessá-lo",
-        });
+        if (!customer) {
+          return res.status(404).json({
+            error:
+              "Cliente não encontrado ou você não tem permissão para acessá-lo",
+          });
+        }
+        res.json({ customer });
       }
+      if (req.role == "employee") {
+        const customer = await Customer.findOne({
+          _id: id,
+          patient_of: req.user.id,
+        })
+          .select("-password")
+          .populate("patient_of", "name email")
+          .populate("client_of", "name")
+          .populate("appointments");
 
-      res.json({ customer });
+        if (!customer) {
+          return res.status(404).json({
+            error:
+              "Cliente não encontrado ou você não tem permissão para acessá-lo",
+          });
+        }
+        res.json({ customer });
+      }
     } catch (error) {
       console.error("Erro ao buscar cliente:", error);
       res.status(500).json({ error: "Erro ao buscar cliente" });
