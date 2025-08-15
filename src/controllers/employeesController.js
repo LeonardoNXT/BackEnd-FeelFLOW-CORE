@@ -349,29 +349,48 @@ const employeesController = {
   // Listar funcionários
   async getEmployees(req, res) {
     try {
-      // Verificar se o usuário está autenticado
       if (!req.user || !req.user.id) {
-        return res.status(401).json({
-          error: "Usuário não autenticado",
-        });
+        return res.status(401).json({ error: "Usuário não autenticado" });
       }
 
-      console.log("Buscando funcionários para o usuário:", req.user.id);
+      let filter = {};
+      let selectContent = "";
 
-      // Buscar todos os funcionários que pertencem ao usuário autenticado
-      const employees = await Employee.find({
-        employee_of: req.user.id,
-      })
-        .select("-password") // Excluir senha dos resultados
-        .sort({ createdAt: -1 }); // Ordenar por data de criação (mais recente primeiro)
+      if (req.user.role === "adm") {
+        filter = { employee_of: req.user.id };
+        selectContent = "-password";
+      } else if (req.user.role === "employee") {
+        const employee = await Employee.findById(req.user.id);
+        if (!employee) {
+          return res.status(404).json({ error: "Funcionário não encontrado" });
+        }
+        filter = { employee_of: employee.employee_of };
+        selectContent =
+          "-password -cpf -rg -birthday -phone -address -remuneration";
+      } else {
+        return res.status(403).json({ error: "Função não autorizada" });
+      }
 
-      console.log(`Encontrados ${employees.length} funcionários`);
+      const employees = await Employee.find(filter)
+        .select(selectContent || "-password") // conteudo mudo de acordo com o role
+        .sort({ createdAt: -1 });
 
-      // Retornar todos os funcionários
+      let ativos = 0;
+      let inativos = 0;
+      employees.forEach((e) => {
+        // evitei o filter porque ele passa duas vezes pela lista
+        if (e.status === "Ativo") ativos++;
+        else if (e.status === "Inativo") inativos++;
+      });
+
       res.json({
         employees,
         total: employees.length,
-        message: "Funcionários listados com sucesso",
+        ativos,
+        inativos,
+        message: `POST realizado com sucesso pelo ${
+          req.user.role === "adm" ? "Administrador" : "Funcionário"
+        }`,
       });
     } catch (error) {
       console.error("Erro ao listar funcionários:", error);

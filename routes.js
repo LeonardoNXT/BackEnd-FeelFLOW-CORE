@@ -35,9 +35,9 @@ route.post(
 
 // Listar funcionários
 route.post(
-  "/employees/all",
+  "/employees/all", // ABAC
   checkToken,
-  authorize("adm"),
+  authorize("adm", "employee"),
   employeesController.getEmployees
 );
 
@@ -86,10 +86,10 @@ route.post(
 );
 
 // Listar todos os clientes
-route.get(
+route.post(
   "/customers",
   checkToken,
-  authorize("adm"),
+  authorize("adm", "employee"),
   customersController.getCustomers
 );
 
