@@ -622,7 +622,7 @@ const employeesController = {
           message: "Usuário não autorizado para esta operação",
         });
       }
-      const findMethod = {};
+      let findMethod = {};
       if (userRole == "adm") {
         console.log("passou por aqui");
         findMethod = {
