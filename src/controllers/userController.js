@@ -15,7 +15,7 @@ exports.meUser = async (req, res) => {
     }
 
     return res.status(200).json([
-      { user },
+      user,
       {
         role: req.user.role,
       },
