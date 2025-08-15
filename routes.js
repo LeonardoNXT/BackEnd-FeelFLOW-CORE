@@ -41,6 +41,13 @@ route.post(
   employeesController.getEmployees
 );
 
+route.post(
+  "/employees/hirings",
+  authorize("adm", "employee"),
+  checkToken,
+  employeesController.HiringEmployees
+);
+
 // Buscar funcionário por ID
 route.post(
   "/employees/:id",
@@ -72,13 +79,6 @@ route.patch(
   authorize("adm"),
   checkToken,
   employeesController.toggleEmployeeStatus
-);
-
-route.post(
-  "/employees/hirings",
-  authorize("adm", "employee"),
-  checkToken,
-  employeesController.HiringEmployees
 );
 
 // ---- PACIENTES/CLIENTES ---- //

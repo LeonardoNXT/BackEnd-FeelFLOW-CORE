@@ -624,6 +624,7 @@ const employeesController = {
       }
       const findMethod = {};
       if (userRole == "adm") {
+        console.log("passou por aqui");
         findMethod = {
           employee_of: userId,
         };
