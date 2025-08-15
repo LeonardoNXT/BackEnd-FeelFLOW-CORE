@@ -95,13 +95,7 @@ route.get(
 );
 
 // Buscar cliente por ID
-route.post(
-  "/customers",
-  checkToken,
-  authorize("adm", "employee"),
-  customersController.getCustomers
-);
-route.get("/customers/:id", checkToken, customersController.getCustomerById);
+route.post("/customers/:id", checkToken, customersController.getCustomerById);
 
 // Atualizar cliente
 route.put(
