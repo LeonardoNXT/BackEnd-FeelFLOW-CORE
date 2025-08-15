@@ -160,7 +160,7 @@ const customersController = {
         await Organization.findByIdAndUpdate(
           custumers,
           {
-            $addToSet: { custumer: savedCustomer._id },
+            $addToSet: { custumers: savedCustomer._id },
           },
           {
             new: true,
