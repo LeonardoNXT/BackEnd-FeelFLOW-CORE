@@ -235,6 +235,93 @@ const customersController = {
       });
     }
   },
+  async customerLogin(req, res) {
+    try {
+      const { email, password, mobile } = req.body;
+      if (!email)
+        return res.status(422).json({ msg: "Preencha o email corretamente." });
+      if (!password)
+        return res.status(422).json({ msg: "Preencha a senha corretamente." });
+
+      // Verifica se o usuário existe
+      const patient = await Customer.findOne({ email }).select("+password");
+      if (!patient) {
+        return res.status(404).json({ msg: "Usuário não foi encontrado." });
+      }
+
+      // Verifica se a senha está correta
+      const checkPassword = await bcrypt.compare(password, patient.password);
+      if (!checkPassword) {
+        return res
+          .status(422)
+          .json({ msg: "Senha incorreta. Por favor, tente novamente." });
+      }
+
+      // Gera o token JWT
+      const token = jwt.sign({ id: patient._id }, process.env.SECRET, {
+        expiresIn: "7d",
+      });
+
+      // Configuração do cookie baseada no ambiente
+      const isProduction = process.env.NODE_ENV === "production";
+      const origin = req.get("origin") || req.get("referer");
+
+      console.log("=== LOGIN DEBUG ===");
+      console.log("Environment:", process.env.NODE_ENV);
+      console.log("Origin:", origin);
+      console.log("Is Production:", isProduction);
+
+      // Configuração do cookie para produção (cross-origin)
+      const cookieConfig = {
+        httpOnly: true,
+        secure: true, // Obrigatório com SameSite=None
+        sameSite: "None",
+        path: "/",
+        maxAge: 1000 * 60 * 60 * 24 * 7, // exemplo: 7 dias
+      };
+
+      if (isProduction && origin) {
+        res.setHeader(
+          "Access-Control-Allow-Headers",
+          "Content-Type, Authorization, Cookie"
+        );
+        res.setHeader("Access-Control-Allow-Origin", origin);
+        res.setHeader("Vary", "Origin");
+      }
+
+      res.cookie("token", token, cookieConfig);
+
+      console.log("Cookie config:", cookieConfig);
+      console.log("Token generated for user:", patient._id);
+      console.log("===================");
+
+      if (mobile) {
+        return res.status(200).json({
+          msg: "Autenticação realizada com sucesso.",
+          token: token,
+          user: {
+            id: patient._id,
+            name: patient.name,
+            email: patient.email,
+          },
+        });
+      } else {
+        return res.status(200).json({
+          msg: "Autenticação realizada com sucesso.",
+          user: {
+            id: patient._id,
+            name: patient.name,
+            email: patient.email,
+          },
+        });
+      }
+    } catch (error) {
+      console.error("Login error:", error);
+      return res.status(500).json({
+        msg: "Ocorreu um erro no servidor, tente novamente mais tarde!",
+      });
+    }
+  },
 
   // Atualizar senha do cliente
   async updateCustomerPassword(req, res) {
@@ -323,7 +410,7 @@ const customersController = {
       })
         .select("-password") // Excluir senha dos resultados
         .populate("patient_of", "name email") // Popular dados do funcionário responsável
-        .populate("appointments") // Popular appointments se necessário
+        .populate("appointments") // Popular appointments
         .sort({ createdAt: -1 }); // Ordenar por data de criação (mais recente primeiro)
 
       console.log(`Encontrados ${customers.length} clientes`);

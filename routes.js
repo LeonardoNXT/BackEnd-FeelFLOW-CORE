@@ -83,7 +83,7 @@ route.patch(
 
 // ---- PACIENTES/CLIENTES ---- //
 
-// Criar novo cliente
+// cadastrar novo pacientes
 route.post(
   "/customers",
   checkToken,
@@ -91,6 +91,10 @@ route.post(
   handleMulterError,
   customersController.createCustomer
 );
+
+// login
+
+route.post("/custumers/login", customersController.customerLogin);
 
 // Listar todos os clientes
 route.post(
