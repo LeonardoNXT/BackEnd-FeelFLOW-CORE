@@ -357,7 +357,7 @@ const customersController = {
       }
 
       // Buscar apenas clientes que pertencem ao usuário autenticado
-      if (req.role == "adm") {
+      if (req.user.role == "adm") {
         const customer = await Customer.findOne({
           _id: id,
           client_of: req.user.id,
@@ -375,7 +375,7 @@ const customersController = {
         }
         res.json({ customer });
       }
-      if (req.role == "employee") {
+      if (req.user.role == "employee") {
         const customer = await Customer.findOne({
           _id: id,
           patient_of: req.user.id,
