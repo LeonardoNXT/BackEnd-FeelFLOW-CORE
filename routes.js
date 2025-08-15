@@ -43,8 +43,8 @@ route.post(
 
 route.post(
   "/employees/hirings",
-  authorize("adm", "employee"),
   checkToken,
+  authorize("adm", "employee"),
   employeesController.HiringEmployees
 );
 
