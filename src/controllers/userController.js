@@ -14,7 +14,10 @@ exports.meUser = async (req, res) => {
       return res.status(404).json({ msg: "O usuário não foi encontrado." });
     }
 
-    return res.status(200).json([user, req.user.role]);
+    return res.status(200).json({
+      ...user,
+      role: req.user.role,
+    });
   } catch (error) {
     console.error(error);
     return res.status(500).json({ msg: "Erro ao buscar usuário." });
