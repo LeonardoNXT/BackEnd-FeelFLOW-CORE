@@ -14,7 +14,7 @@ route.get("/", (req, res) => {
 
 // ---- ADM FUNCOES ---- //
 
-route.post("/auth/login", userController.login);
+route.post("/admin/login", userController.login);
 
 // para registrar novos usuários
 route.post("/auth/register", checkToken, userController.registerUser);
