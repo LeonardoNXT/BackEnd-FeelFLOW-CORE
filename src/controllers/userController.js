@@ -9,18 +9,18 @@ const Customer = require("../models/Customer");
 exports.meUser = async (req, res) => {
   try {
     console.log(req.user.role);
-    let user = {};
+    let user = null;
     switch (req.user.role) {
       case "adm":
-        console.log("passou por aqui");
+        console.log("Ou usuário é um ", req.user.id);
         user = await Organization.findById(req.user.id);
         break;
       case "employee":
-        console.log("passou por aqui");
+        console.log("Ou usuário é um ", req.user.id);
         user = await Employee.findById(req.user.id);
         break;
       case "patient":
-        console.log("passou por aqui");
+        console.log("Ou usuário é um ", req.user.id);
         user = await Customer.findById(req.user.id);
         break;
     }
