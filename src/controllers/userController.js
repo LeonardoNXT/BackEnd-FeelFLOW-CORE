@@ -18,7 +18,10 @@ exports.meUser = async (req, res) => {
         break;
       case "employee":
         console.log("Ou usuário é um ", req.user.id);
-        user = await Employee.findById(req.user.id);
+        user = await Employee.findById(req.user.id).populate({
+          path: "patients",
+          select: "name email avatar",
+        });
         console.log("O usuário é", user);
         break;
       case "patient":
