@@ -200,10 +200,6 @@ const employeesController = {
       } catch (orgUpdateError) {
         console.error("Erro ao atualizar organização:", orgUpdateError);
 
-        // Como o funcionário já foi criado, você pode optar por:
-        // 1. Deletar o funcionário e retornar erro
-        // 2. Continuar sem adicionar à organização (e logar o erro)
-        // Aqui vou optar pela opção 1 para manter consistência
 
         await Employee.findByIdAndDelete(savedEmployee._id);
 

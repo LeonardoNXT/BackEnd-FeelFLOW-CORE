@@ -135,6 +135,7 @@ exports.login = async (req, res) => {
         id: business._id,
         name: business.name,
         email: business.email,
+        role: "adm",
       },
     });
   } catch (error) {

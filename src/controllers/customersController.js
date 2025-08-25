@@ -312,6 +312,7 @@ const customersController = {
             id: patient._id,
             name: patient.name,
             email: patient.email,
+            role: "patient",
           },
         });
       }
