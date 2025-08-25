@@ -20,7 +20,7 @@ exports.meUser = async (req, res) => {
         console.log("Ou usuário é um ", req.user.id);
         user = await Employee.findById(req.user.id).populate({
           path: "patients",
-          select: "name email avatar",
+          select: "name email avatar status",
         });
         console.log("O usuário é", user);
         break;
