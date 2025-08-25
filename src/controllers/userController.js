@@ -8,7 +8,18 @@ const Customer = require("../models/Customer");
 // Obter dados do usuário autenticado
 exports.meUser = async (req, res) => {
   try {
-    const user = await Organization.findById(req.user.id, "-password");
+    let user = {};
+    switch (req.user.role) {
+      case "adm":
+        user = await Organization.findById(req.user.id);
+        break;
+      case "employee":
+        user = await Employee.findById(req.user.id);
+        break;
+      case "patient":
+        user = await Customer.findById(req.user.id);
+        break;
+    }
 
     if (!user) {
       return res.status(404).json({ msg: "O usuário não foi encontrado." });

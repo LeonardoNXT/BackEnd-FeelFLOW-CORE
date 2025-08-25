@@ -1,6 +1,7 @@
 const jwt = require("jsonwebtoken");
 const Organization = require("../models/Organization");
 const Employees = require("../models/Employee");
+const Customer = require("../models/Customer");
 
 module.exports = async (req, res, next) => {
   const token =
@@ -29,6 +30,8 @@ module.exports = async (req, res, next) => {
       role = "adm";
     } else if (await Employees.findById(decoded.id)) {
       role = "employee";
+    } else if (await Customer.findById(decoded.id)) {
+      role = "patient";
     }
 
     console.log(role);

@@ -24,6 +24,10 @@ route.post("/auth/verify", checkToken, userController.meUser);
 
 // ---- FUNCIONÁRIOS ---- //
 
+//login funcionários
+
+route.post("/custumers/login", employeesController.employeeLogin);
+
 // Criar funcionário
 route.post(
   "/employees",
@@ -92,7 +96,7 @@ route.post(
   customersController.createCustomer
 );
 
-// login
+// login de pacientes
 
 route.post("/custumers/login", customersController.customerLogin);
 
