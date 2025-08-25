@@ -11,12 +11,15 @@ exports.meUser = async (req, res) => {
     let user = {};
     switch (req.user.role) {
       case "adm":
+        console.log("passou por aqui");
         user = await Organization.findById(req.user.id);
         break;
       case "employee":
+        console.log("passou por aqui");
         user = await Employee.findById(req.user.id);
         break;
       case "patient":
+        console.log("passou por aqui");
         user = await Customer.findById(req.user.id);
         break;
     }
