@@ -8,6 +8,7 @@ const Customer = require("../models/Customer");
 // Obter dados do usuário autenticado
 exports.meUser = async (req, res) => {
   try {
+    console.log(req.user.role);
     let user = {};
     switch (req.user.role) {
       case "adm":
