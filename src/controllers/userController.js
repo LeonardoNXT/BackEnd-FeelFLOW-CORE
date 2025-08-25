@@ -14,17 +14,19 @@ exports.meUser = async (req, res) => {
       case "adm":
         console.log("Ou usuário é um ", req.user.id);
         user = await Organization.findById(req.user.id);
+        console.log(user);
         break;
       case "employee":
         console.log("Ou usuário é um ", req.user.id);
         user = await Employee.findById(req.user.id);
+        console.log(user);
         break;
       case "patient":
         console.log("Ou usuário é um ", req.user.id);
         user = await Customer.findById(req.user.id);
+        console.log(user);
         break;
     }
-    console.log(user);
 
     if (!user) {
       return res.status(404).json({ msg: "O usuário não foi encontrado." });

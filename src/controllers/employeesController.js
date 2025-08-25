@@ -280,13 +280,13 @@ const employeesController = {
         return res.status(422).json({ msg: "Preencha a senha corretamente." });
 
       // Verifica se o usuário existe
-      const patient = await Customer.findOne({ email }).select("+password");
-      if (!patient) {
+      const employee = await Employee.findOne({ email }).select("+password");
+      if (!employee) {
         return res.status(404).json({ msg: "Usuário não foi encontrado." });
       }
 
       // Verifica se a senha está correta
-      const checkPassword = await bcrypt.compare(password, patient.password);
+      const checkPassword = await bcrypt.compare(password, employee.password);
       if (!checkPassword) {
         return res
           .status(422)
@@ -294,7 +294,7 @@ const employeesController = {
       }
 
       // Gera o token JWT
-      const token = jwt.sign({ id: patient._id }, process.env.SECRET, {
+      const token = jwt.sign({ id: employee._id }, process.env.SECRET, {
         expiresIn: "7d",
       });
 
@@ -328,7 +328,7 @@ const employeesController = {
       res.cookie("token", token, cookieConfig);
 
       console.log("Cookie config:", cookieConfig);
-      console.log("Token generated for user:", patient._id);
+      console.log("Token generated for user:", employee._id);
       console.log("===================");
 
       if (mobile) {
@@ -336,18 +336,18 @@ const employeesController = {
           msg: "Autenticação realizada com sucesso.",
           token: token,
           user: {
-            id: patient._id,
-            name: patient.name,
-            email: patient.email,
+            id: employee._id,
+            name: employee.name,
+            email: employee.email,
           },
         });
       } else {
         return res.status(200).json({
           msg: "Autenticação realizada com sucesso.",
           user: {
-            id: patient._id,
-            name: patient.name,
-            email: patient.email,
+            id: employee._id,
+            name: employee.name,
+            email: employee.email,
             role: "employee",
           },
         });
