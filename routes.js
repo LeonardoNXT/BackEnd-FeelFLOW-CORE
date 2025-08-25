@@ -26,7 +26,7 @@ route.post("/auth/verify", checkToken, userController.meUser);
 
 //login funcionários
 
-route.post("/custumers/login", employeesController.employeeLogin);
+route.post("/employees/login", employeesController.employeeLogin);
 
 // Criar funcionário
 route.post(
