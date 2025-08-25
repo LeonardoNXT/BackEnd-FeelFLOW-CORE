@@ -14,17 +14,17 @@ exports.meUser = async (req, res) => {
       case "adm":
         console.log("Ou usuário é um ", req.user.id);
         user = await Organization.findById(req.user.id);
-        console.log(user);
+        console.log("O usuário é", user);
         break;
       case "employee":
         console.log("Ou usuário é um ", req.user.id);
         user = await Employee.findById(req.user.id);
-        console.log(user);
+        console.log("O usuário é", user);
         break;
       case "patient":
         console.log("Ou usuário é um ", req.user.id);
         user = await Customer.findById(req.user.id);
-        console.log(user);
+        console.log("O usuário é", user);
         break;
     }
 
