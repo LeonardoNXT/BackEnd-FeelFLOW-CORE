@@ -94,8 +94,9 @@ const appointmentsController = {
     }
   },
   async getAppointments(req, res) {
-    const { role, user } = req; // vem do middleware
+    const { user } = req; // vem do middleware
     const userId = user.id;
+    const role = user.role;
 
     try {
       let appointments = [];
