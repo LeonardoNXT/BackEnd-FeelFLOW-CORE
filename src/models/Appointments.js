@@ -28,6 +28,9 @@ const appointmentSchema = new mongoose.Schema({
   acceptedAt: {
     type: Date,
   },
+  date: {
+    type: Date,
+  },
 });
 
 const Appointment = mongoose.model("Appointment", appointmentSchema);

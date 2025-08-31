@@ -12,7 +12,7 @@ function errorHelper(res, status, error, message) {
 const appointmentsController = {
   async createAppointment(req, res) {
     const EmployeeId = req.user.id;
-    const { patientId } = req.body;
+    const { patientId, date } = req.body;
 
     if (!EmployeeId) {
       return errorHelper(
@@ -46,6 +46,15 @@ const appointmentsController = {
       );
     }
 
+    if (!date) {
+      return errorHelper(
+        res,
+        400,
+        "Data não encontrada",
+        "Inclua a data na requisição corretamente; type: date"
+      );
+    }
+
     const PatientUser = await Customer.findById(patientId);
 
     if (!PatientUser) {
@@ -63,6 +72,7 @@ const appointmentsController = {
         createdBy: EmployeeId,
         organization: orgOfEmployee,
         intendedFor: patientId,
+        date,
       });
 
       return res.status(201).json({
