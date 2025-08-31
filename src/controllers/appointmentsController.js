@@ -11,7 +11,7 @@ function errorHelper(res, status, error, message) {
 
 const appointmentsController = {
   async createAppointment(req, res) {
-    const EmployeeId = req.body.id;
+    const EmployeeId = req.user.id;
     const { patientId } = req.body;
 
     if (!EmployeeId) {
