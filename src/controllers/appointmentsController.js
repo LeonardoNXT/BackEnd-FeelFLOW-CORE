@@ -102,11 +102,11 @@ const appointmentsController = {
 
       if (role === "patient") {
         appointments = await Appointment.find({ intendedFor: userId })
-          .populate("createdBy", "name") // opcional: mostrar quem criou
+          .populate("createdBy", "name avatar") // opcional: mostrar quem criou
           .sort({ createdAt: -1 });
       } else if (role === "employee") {
         appointments = await Appointment.find({ createdBy: userId })
-          .populate("intendedFor", "name") // opcional: mostrar pra quem é
+          .populate("intendedFor", "name avatar") // opcional: mostrar pra quem é
           .sort({ createdAt: -1 });
       } else {
         return errorHelper(

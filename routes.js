@@ -22,7 +22,7 @@ route.post(
   appointmentsController.createAppointment
 );
 route.post(
-  "/appointments/",
+  "/appointments",
   checkToken,
   authorize("employee", "patient"),
   appointmentsController.getAppointments
