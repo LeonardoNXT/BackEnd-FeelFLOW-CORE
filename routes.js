@@ -6,11 +6,27 @@ const userController = require("./src/controllers/userController");
 const iaController = require("./src/controllers/iaController");
 const employeesController = require("./src/controllers/employeesController");
 const customersController = require("./src/controllers/customersController");
+const appointmentsController = require("./src/controllers/appointmentsController");
 const { upload, handleMulterError } = require("./src/middlewares/upload");
 
 route.get("/", (req, res) => {
   res.send("Bem vindo a NewArchAPI!");
 });
+
+// ---- Agendamento ---- ///
+
+route.post(
+  "/appointments/create",
+  checkToken,
+  authorize("employee", "patient"),
+  appointmentsController.createAppointment
+);
+route.post(
+  "/appointments/",
+  checkToken,
+  authorize("employee", "patient"),
+  appointmentsController.getAppointments
+);
 
 // ---- ADM FUNCOES ---- //
 
@@ -152,15 +168,15 @@ route.patch(
 
 // Adicionar entrada no diário de humor
 route.post(
-  "/customers/:id/mood-diary",
+  "/customers/set/mood-diary",
   checkToken,
   authorize("patient"),
   customersController.addMoodEntry
 );
 
 // Obter diário de humor do cliente
-route.get(
-  "/customers/:id/mood-diary",
+route.post(
+  "/customers/get/mood-diary",
   checkToken,
   authorize("adm", "employee"),
   customersController.getMoodDiary

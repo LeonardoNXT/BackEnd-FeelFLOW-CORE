@@ -696,7 +696,7 @@ const customersController = {
   // Adicionar entrada no diário de humor
   async addMoodEntry(req, res) {
     try {
-      const { id } = req.params;
+      const id = req.user.id;
       const { emotion, intensity, description, address } = req.body;
 
       // Validações básicas

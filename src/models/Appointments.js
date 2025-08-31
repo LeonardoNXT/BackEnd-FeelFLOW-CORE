@@ -3,15 +3,20 @@ const mongoose = require("mongoose");
 const appointmentSchema = new mongoose.Schema({
   status: {
     type: String,
-    enum: ["agendado", "cancelado", "concluido", "em andamento"],
-    required: true,
+    enum: ["agendado", "cancelado", "concluido", "pendente"],
+    default: "pendente",
   },
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Employee",
     required: true,
   },
-  acceptedBy: {
+  organization: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Organization",
+    required: true,
+  },
+  intendedFor: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Customer",
     default: null,
@@ -19,6 +24,9 @@ const appointmentSchema = new mongoose.Schema({
   createdAt: {
     type: Date,
     default: Date.now,
+  },
+  acceptedAt: {
+    type: Date,
   },
 });
 
