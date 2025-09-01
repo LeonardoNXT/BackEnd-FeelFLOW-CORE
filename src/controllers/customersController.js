@@ -406,13 +406,25 @@ const customersController = {
       console.log("Buscando clientes para o usuário:", req.user.id);
 
       // Buscar todos os clientes que pertencem ao usuário autenticado
-      const customers = await Customer.find({
-        client_of: req.user.id,
-      })
-        .select("-password") // Excluir senha dos resultados
-        .populate("patient_of", "name email") // Popular dados do funcionário responsável
-        .populate("appointments") // Popular appointments
-        .sort({ createdAt: -1 }); // Ordenar por data de criação (mais recente primeiro)
+      let customers = null;
+
+      if (req.user.role == "adm") {
+        customers = await Customer.find({
+          client_of: req.user.id,
+        })
+          .select("-password")
+          .populate("patient_of", "name email")
+          .populate("appointments")
+          .sort({ createdAt: -1 });
+      } else {
+        customers = await Customer.find({
+          patient_of: req.user.id,
+        })
+          .select("-password")
+          .populate("patient_of", "name email")
+          .populate("appointments")
+          .sort({ createdAt: -1 });
+      }
 
       console.log(`Encontrados ${customers.length} clientes`);
 
