@@ -28,15 +28,12 @@ route.post(
   appointmentsController.getAppointments
 );
 
+// para verificar se está logado FUNCIONARIO/ADM/CLIENTE
+route.post("/auth/verify", checkToken, userController.meUser);
+
 // ---- ADM FUNCOES ---- //
 
 route.post("/admin/login", userController.login);
-
-// para registrar novos usuários
-route.post("/auth/register", checkToken, userController.registerUser);
-
-// para verificar se está logado
-route.post("/auth/verify", checkToken, userController.meUser);
 
 // ---- FUNCIONÁRIOS ---- //
 
@@ -118,7 +115,7 @@ route.post("/custumers/login", customersController.customerLogin);
 
 // Listar todos os clientes
 route.post(
-  "/customers",
+  "/customers/all",
   checkToken,
   authorize("adm", "employee"),
   customersController.getCustomers
