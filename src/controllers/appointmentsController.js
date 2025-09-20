@@ -55,17 +55,6 @@ const appointmentsController = {
       );
     }
 
-    const PatientUser = await Customer.findById(patientId);
-
-    if (!PatientUser) {
-      return errorHelper(
-        res,
-        404,
-        "Paciente não encontrado",
-        "Coloque corretamente o ObjectId do Paciente no body da requisição."
-      );
-    }
-
     try {
       const orgOfEmployee = EmployeeUser.employee_of;
       const createAppointment = await Appointment.create({
@@ -75,11 +64,18 @@ const appointmentsController = {
         date,
       });
 
+      const PatientUser = await Customer.findByIdAndUpdate(
+        patientId,
+        {
+          $push: { appointments: createAppointment._id },
+        },
+        { new: true }
+      );
+
       return res.status(201).json({
         message: `Seu agendamento foi cadastrado com sucesso para ${PatientUser.name}`,
         agendamento: {
           id: createAppointment._id,
-          patient: PatientUser.name,
           organization: orgOfEmployee,
           createdAt: createAppointment.createdAt,
         },
@@ -93,7 +89,7 @@ const appointmentsController = {
       );
     }
   },
-  async getAppointments(req, res) {
+  async getAllAppointments(req, res) {
     const { user } = req; // vem do middleware
     const userId = user.id;
     const role = user.role;
@@ -107,6 +103,52 @@ const appointmentsController = {
           .sort({ createdAt: -1 });
       } else if (role === "employee") {
         appointments = await Appointment.find({ createdBy: userId })
+          .populate("intendedFor", "name avatar") // opcional: mostrar pra quem é
+          .sort({ createdAt: -1 });
+      } else {
+        return errorHelper(
+          res,
+          403,
+          "Acesso negado",
+          "Sua role não permite visualizar agendamentos."
+        );
+      }
+
+      return res.status(200).json({
+        message: "Agendamentos carregados com sucesso",
+        total: appointments.length,
+        appointments,
+      });
+    } catch (err) {
+      return errorHelper(
+        res,
+        500,
+        "Erro interno",
+        err.message || "Não foi possível buscar os agendamentos."
+      );
+    }
+  },
+  async getPedingAppointments(req, res) {
+    const { user } = req; // vem do middleware
+    const userId = user.id;
+    const role = user.role;
+    const dateNow = new Date().getTime();
+
+    try {
+      let appointments = [];
+
+      if (role === "patient") {
+        appointments = await Appointment.find({
+          intendedFor: userId,
+          date: { $gt: new Date() },
+        })
+          .populate("createdBy", "name avatar")
+          .sort({ date: -1 });
+      } else if (role === "employee") {
+        appointments = await Appointment.find({
+          createdBy: userId,
+          date: { $gt: new Date() },
+        })
           .populate("intendedFor", "name avatar") // opcional: mostrar pra quem é
           .sort({ createdAt: -1 });
       } else {

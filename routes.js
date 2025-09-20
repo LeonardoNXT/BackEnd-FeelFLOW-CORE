@@ -15,17 +15,28 @@ route.get("/", (req, res) => {
 
 // ---- Agendamento ---- ///
 
+// cria novos agendamentos
 route.post(
   "/appointments/create",
   checkToken,
   authorize("employee", "patient"),
   appointmentsController.createAppointment
 );
+// pega todos os agendamentos daquele adm
 route.post(
-  "/appointments",
+  "/appointments/all",
   checkToken,
-  authorize("employee", "patient"),
-  appointmentsController.getAppointments
+  authorize("employee", "patient", "adm"),
+  appointmentsController.getAllAppointments
+);
+
+// pega todos os agendamentos pendentes
+
+route.post(
+  "/appointments/pending",
+  checkToken,
+  authorize("employee", " patient"),
+  appointmentsController.getPedingAppointments
 );
 
 // para verificar se está logado FUNCIONARIO/ADM/CLIENTE
