@@ -35,7 +35,7 @@ route.post(
 route.post(
   "/appointments/pending",
   checkToken,
-  authorize("employee", " patient"),
+  authorize("employee", "patient"),
   appointmentsController.getPedingAppointments
 );
 

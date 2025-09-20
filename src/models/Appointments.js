@@ -32,6 +32,10 @@ const appointmentSchema = new mongoose.Schema({
     type: Date,
     required: true,
   },
+  send_email: {
+    type: Boolean,
+    default: "false",
+  },
 });
 
 const Appointment = mongoose.model("Appointment", appointmentSchema);
