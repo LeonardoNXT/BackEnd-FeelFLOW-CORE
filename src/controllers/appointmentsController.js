@@ -143,14 +143,14 @@ const appointmentsController = {
           date: { $gt: new Date() },
         })
           .populate("createdBy", "name avatar")
-          .sort({ date: -1 });
+          .sort({ date: 1 });
       } else if (role === "employee") {
         appointments = await Appointment.find({
           createdBy: userId,
           date: { $gt: new Date() },
         })
           .populate("intendedFor", "name avatar") // opcional: mostrar pra quem é
-          .sort({ date: -1 });
+          .sort({ date: 1 });
       } else {
         return errorHelper(
           res,
