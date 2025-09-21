@@ -132,7 +132,6 @@ const appointmentsController = {
     const { user } = req; // vem do middleware
     const userId = user.id;
     const role = user.role;
-    const dateNow = new Date().getTime();
 
     try {
       let appointments = [];

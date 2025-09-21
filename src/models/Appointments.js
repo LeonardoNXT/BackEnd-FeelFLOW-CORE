@@ -34,7 +34,7 @@ const appointmentSchema = new mongoose.Schema({
   },
   send_email: {
     type: Boolean,
-    default: "false",
+    default: false,
   },
 });
 

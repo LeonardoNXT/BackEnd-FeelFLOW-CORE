@@ -199,3 +199,17 @@ route.post("/ai/chat", checkToken, iaController.chatWithAI);
 route.use(handleMulterError);
 
 module.exports = route;
+
+// logout //'
+
+route.post("/logout", (req, res) => {
+  const token =
+    req.cookies?.token ||
+    req.body.token ||
+    req.headers.authorization?.replace("Bearer ", "");
+  if (token) {
+    blacklist.add(token);
+  }
+  res.clearCookie("token", { path: "/", sameSite: "None", secure: true });
+  res.status(200);
+});
