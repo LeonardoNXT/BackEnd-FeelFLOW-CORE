@@ -211,5 +211,5 @@ route.post("/logout", (req, res) => {
     blacklist.add(token);
   }
   res.clearCookie("token", { path: "/", sameSite: "None", secure: true });
-  res.status(200);
+  res.status(200).send({ message: "Logout realizado com sucesso" });
 });
