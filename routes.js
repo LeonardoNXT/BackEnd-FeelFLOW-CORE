@@ -39,6 +39,22 @@ route.post(
   appointmentsController.getPedingAppointments
 );
 
+//Altera a data do agendamento
+
+route.patch(
+  "/appointments/reschedule/:id",
+  checkToken,
+  authorize("adm", "employee"),
+  appointmentsController.rescheduleAppointment
+);
+
+// Cancelar o agendamento selecionado
+route.post(
+  "/appointments/uncheck/:id",
+  checkToken,
+  authorize("employee", "adm")
+);
+
 // para verificar se está logado FUNCIONARIO/ADM/CLIENTE
 route.post("/auth/verify", checkToken, userController.meUser);
 

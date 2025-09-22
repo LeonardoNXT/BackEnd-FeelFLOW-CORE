@@ -173,6 +173,84 @@ const appointmentsController = {
       );
     }
   },
+  async rescheduleAppointment(req, res) {
+    const { role, idOfUser } = req.user;
+    const id = req.params.id || req.body.id;
+    const { date } = req.body;
+
+    if (!id) {
+      return errorHelper(
+        res,
+        404,
+        "ID não encontrado",
+        "O ID não foi colocado corretamente na requisição."
+      );
+    }
+
+    if (isNaN(new Date(date).getTime())) {
+      return errorHelper(
+        res,
+        400,
+        "Data inválida",
+        "O formato da data está incorreto."
+      );
+    }
+
+    if (new Date().getTime() > new Date(date).getTime()) {
+      return errorHelper(
+        res,
+        400,
+        "A data selecionada está no passado",
+        "Selecione uma data futura para agendar."
+      );
+    }
+
+    const existing = await Appointment.findById(id);
+    if (!existing) {
+      return errorHelper(
+        res,
+        404,
+        "Erro ao encontrar o agendamento",
+        "Certifique-se da validade do ID do agendamento."
+      );
+    }
+
+    let validateBy = false;
+    if (role === "adm") {
+      validateBy = existing.organization?.equals(idOfUser);
+    } else if (role === "employee") {
+      validateBy = existing.createdBy?.equals(idOfUser);
+    }
+
+    if (!validateBy) {
+      return errorHelper(
+        res,
+        401,
+        "O usuário não foi autorizado",
+        "Este usuário não pode alterar este agendamento."
+      );
+    }
+
+    try {
+      const updatedAppointment = await Appointment.findByIdAndUpdate(
+        id,
+        { date },
+        { new: true }
+      );
+      res.status(200).json({
+        message: "O agendamento foi alterado com sucesso",
+        updatedAppointment,
+      });
+    } catch (err) {
+      console.log(err);
+      return errorHelper(
+        res,
+        500,
+        "Houve um erro interno",
+        "Tente novamente mais tarde."
+      );
+    }
+  },
 };
 
 module.exports = appointmentsController;
