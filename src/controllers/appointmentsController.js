@@ -174,7 +174,9 @@ const appointmentsController = {
     }
   },
   async rescheduleAppointment(req, res) {
-    const { role, idOfUser } = req.user;
+    const { user } = req; // vem do middleware
+    const userId = user.id;
+    const role = user.role;
     const id = req.params.id || req.body.id;
     const { date } = req.body;
 
@@ -217,10 +219,9 @@ const appointmentsController = {
 
     let validateBy = false;
     if (role === "adm") {
-      validateBy = existing.organization?.equals(idOfUser);
+      validateBy = existing.organization?.equals(userId);
     } else if (role === "employee") {
-      console.log("Employee : ", idOfUser);
-      validateBy = existing.createdBy?.equals(idOfUser);
+      validateBy = existing.createdBy?.equals(userId);
     }
 
     if (!validateBy) {
