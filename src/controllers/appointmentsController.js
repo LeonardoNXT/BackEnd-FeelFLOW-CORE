@@ -219,6 +219,7 @@ const appointmentsController = {
     if (role === "adm") {
       validateBy = existing.organization?.equals(idOfUser);
     } else if (role === "employee") {
+      console.log("Employee : ", idOfUser);
       validateBy = existing.createdBy?.equals(idOfUser);
     }
 
