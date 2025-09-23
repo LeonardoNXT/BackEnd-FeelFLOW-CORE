@@ -54,18 +54,16 @@ const appointmentsController = {
         "Inclua a data na requisição corretamente; type: date"
       );
     }
-    if (
-      await Appointment.find({
-        createdBy: EmployeeId,
-        date,
-      })
-    ) {
-      return (
-        res,
-        400,
-        "Há um agendamento com a mesma data",
-        "Para agendar, é necessário escolher diferentes datas entre os agendamentos."
-      );
+    const agendamentos = await Appointment.find({
+      createdBy: EmployeeId,
+      date,
+    });
+    if (agendamentos.length > 0) {
+      return res.status(400).json({
+        message: "Há um agendamento com a mesma data",
+        detail:
+          "Para agendar, é necessário escolher diferentes datas entre os agendamentos.",
+      });
     }
 
     try {
