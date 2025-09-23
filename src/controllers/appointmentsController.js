@@ -146,6 +146,7 @@ const appointmentsController = {
       } else if (role === "employee") {
         appointments = await Appointment.find({
           createdBy: userId,
+          status: "pendente",
           date: { $gt: new Date() },
         })
           .populate("intendedFor", "name avatar") // opcional: mostrar pra quem é
