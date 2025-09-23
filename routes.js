@@ -49,10 +49,11 @@ route.patch(
 );
 
 // Cancelar o agendamento selecionado
-route.post(
+route.patch(
   "/appointments/uncheck/:id",
   checkToken,
-  authorize("employee", "adm")
+  authorize("employee", "adm"),
+  appointmentsController.uncheckAppointment
 );
 
 // para verificar se está logado FUNCIONARIO/ADM/CLIENTE

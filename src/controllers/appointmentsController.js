@@ -253,6 +253,57 @@ const appointmentsController = {
       );
     }
   },
+  async uncheckAppointment(req, res) {
+    const userId = req.user.id;
+    const role = req.user.role;
+    const { id } = req.params | req.body;
+
+    const existing = await Appointment.findById(id);
+
+    if (!existing) {
+      if (!existing) {
+        return errorHelper(
+          res,
+          404,
+          "Erro ao encontrar o agendamento",
+          "Certifique-se da validade do ID do agendamento."
+        );
+      }
+    }
+    let validateBy = false;
+    if (role === "adm") {
+      validateBy = existing.organization?.equals(userId);
+    } else if (role === "employee") {
+      validateBy = existing.createdBy?.equals(userId);
+    }
+    if (!validateBy) {
+      return errorHelper(
+        res,
+        401,
+        "O usuário não foi autorizado",
+        "Este usuário não pode alterar este agendamento."
+      );
+    }
+    try {
+      const updatedAppointment = await Appointment.findByIdAndUpdate(
+        id,
+        { status: "cancelado" },
+        { new: true }
+      );
+      res.status(200).json({
+        message: "O agendamento foi desmarcado com sucesso",
+        updatedAppointment,
+      });
+    } catch (err) {
+      console.log(err);
+      return errorHelper(
+        res,
+        500,
+        "Houve um erro interno",
+        "Tente novamente mais tarde."
+      );
+    }
+  },
 };
 
 module.exports = appointmentsController;
