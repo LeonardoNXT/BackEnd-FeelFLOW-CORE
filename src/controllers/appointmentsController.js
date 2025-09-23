@@ -256,7 +256,7 @@ const appointmentsController = {
   async uncheckAppointment(req, res) {
     const userId = req.user.id;
     const role = req.user.role;
-    const { id } = req.params | req.body;
+    const { id } = req.params || req.body;
 
     const existing = await Appointment.findById(id);
 
