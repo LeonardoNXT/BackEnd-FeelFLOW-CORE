@@ -9,6 +9,15 @@ function errorHelper(res, status, error, message) {
   });
 }
 
+function verifyPolicy(existing, userId, role, config) {
+  // procura a regra de config correspondente ao role
+  const policy = config.find((c) => c.role === role);
+  if (!policy) return false;
+
+  const propertyValue = existing[policy.property];
+  return propertyValue?.equals(userId);
+}
+
 const appointmentsController = {
   async createAppointment(req, res) {
     const EmployeeId = req.user.id;
@@ -229,12 +238,18 @@ const appointmentsController = {
       );
     }
 
-    let validateBy = false;
-    if (role === "adm") {
-      validateBy = existing.organization?.equals(userId);
-    } else if (role === "employee") {
-      validateBy = existing.createdBy?.equals(userId);
-    }
+    const CONFIG_PROPERTYS = [
+      {
+        role: "adm",
+        property: "organization",
+      },
+      {
+        role: "employee",
+        property: "createdBy",
+      },
+    ];
+
+    let validateBy = verifyPolicy(existing, userId, role, CONFIG_PROPERTYS);
 
     if (!validateBy) {
       return errorHelper(
@@ -273,15 +288,14 @@ const appointmentsController = {
     const existing = await Appointment.findById(id);
 
     if (!existing) {
-      if (!existing) {
-        return errorHelper(
-          res,
-          404,
-          "Erro ao encontrar o agendamento",
-          "Certifique-se da validade do ID do agendamento."
-        );
-      }
+      return errorHelper(
+        res,
+        404,
+        "Erro ao encontrar o agendamento",
+        "Certifique-se da validade do ID do agendamento."
+      );
     }
+
     let validateBy = false;
     if (role === "adm") {
       validateBy = existing.organization?.equals(userId);
