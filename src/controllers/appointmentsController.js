@@ -4,12 +4,36 @@ const Customer = require("../models/Customer");
 const CONFIG_PROPERTYS = require("./logic/configPropertys");
 const verifyPolicy = require("./logic/verifyPolicy");
 
-function errorHelper(res, status, error, message) {
+function errorHelper({ res, status, error, message }) {
   return res.status(status).json({
     error: error,
     message: message,
   });
 }
+
+const INTERNAL_ERROR_CONFIG = {
+  status: 500,
+  error: "Erro interno",
+  message: "Tente Novamente mais tarde.",
+};
+
+const VALIDATE_ERROR_CONFIG = {
+  status: 401,
+  error: "O usuário não foi autorizado.",
+  message: "O usuário não pode efetuar a ação pelo seu nível de acesso.",
+};
+
+const ID_ERROR_CONFIG = {
+  status: 404,
+  error: "ID não encontrado",
+  message: "O ID não foi colocado corretamente na requisição.",
+};
+
+const FIND_APPOIMENT_ERROR_CONFIG = {
+  status: 404,
+  error: "Erro ao encontrar o agendamento",
+  message: "Certifique-se da validade do ID do agendamento.",
+};
 
 const appointmentsController = {
   async createAppointment(req, res) {
@@ -17,53 +41,56 @@ const appointmentsController = {
     const { patientId, date } = req.body;
 
     if (!EmployeeId) {
-      return errorHelper(
+      return errorHelper({
         res,
-        400,
-        "Faça o Login novamente",
-        "Logue novamente para acessar este Endpoint"
-      );
+        status: 400,
+        error: "Faça o Login novamente",
+        message: "Logue novamente para acessar este Endpoint",
+      });
     }
 
     const EmployeeUser = await Employee.findById(EmployeeId);
 
     if (!EmployeeUser) {
-      return errorHelper(
+      return errorHelper({
         res,
-        404,
-        "Cadastro não encontrado.",
-        "Logue em uma conta válida para acessar este Endpoint"
-      );
+        status: 404,
+        error: "Cadastro não encontrado.",
+        message: "Logue em uma conta válida para acessar este Endpoint",
+      });
     }
 
     if (
       !patientId ||
       !EmployeeUser.patients.map(String).includes(String(patientId))
     ) {
-      return errorHelper(
+      return errorHelper({
         res,
-        400,
-        "Paciente inválido",
-        "Inclua o ObjectId de um paciente válido no corpo da requisição."
-      );
+        status: 400,
+        error: "Paciente inválido",
+        message:
+          "Inclua o ObjectId de um paciente válido no corpo da requisição.",
+      });
     }
 
     if (!date) {
-      return errorHelper(
+      return errorHelper({
         res,
-        400,
-        "Data não encontrada",
-        "Inclua a data na requisição corretamente; type: date"
-      );
+        status: 400,
+        error: "Data não encontrada",
+        message: "Inclua a data na requisição corretamente; type: date",
+      });
     }
     const agendamentos = await Appointment.find({
       createdBy: EmployeeId,
       date,
     });
     if (agendamentos.length > 0) {
-      return res.status(400).json({
-        message: "Há um agendamento com a mesma data",
-        detail:
+      return errorHelper({
+        res,
+        status: 401,
+        error: "Há um agendamento com a mesma data",
+        message:
           "Para agendar, é necessário escolher diferentes datas entre os agendamentos.",
       });
     }
@@ -94,12 +121,11 @@ const appointmentsController = {
         },
       });
     } catch (err) {
-      return errorHelper(
+      console.log(err);
+      return errorHelper({
         res,
-        500,
-        "Erro interno",
-        err.message || "Não foi possível criar o agendamento."
-      );
+        ...INTERNAL_ERROR_CONFIG,
+      });
     }
   },
   async getAllAppointments(req, res) {
@@ -119,12 +145,10 @@ const appointmentsController = {
           .populate("intendedFor", "name avatar") // opcional: mostrar pra quem é
           .sort({ createdAt: -1 });
       } else {
-        return errorHelper(
+        return errorHelper({
           res,
-          403,
-          "Acesso negado",
-          "Sua role não permite visualizar agendamentos."
-        );
+          ...VALIDATE_ERROR_CONFIG,
+        });
       }
 
       return res.status(200).json({
@@ -133,12 +157,10 @@ const appointmentsController = {
         appointments,
       });
     } catch (err) {
-      return errorHelper(
+      return errorHelper({
         res,
-        500,
-        "Erro interno",
-        err.message || "Não foi possível buscar os agendamentos."
-      );
+        ...INTERNAL_ERROR_CONFIG,
+      });
     }
   },
   async getPedingAppointments(req, res) {
@@ -165,12 +187,10 @@ const appointmentsController = {
           .populate("intendedFor", "name avatar") // opcional: mostrar pra quem é
           .sort({ date: 1 });
       } else {
-        return errorHelper(
+        return errorHelper({
           res,
-          403,
-          "Acesso negado",
-          "Sua role não permite visualizar agendamentos."
-        );
+          ...VALIDATE_ERROR_CONFIG,
+        });
       }
 
       return res.status(200).json({
@@ -179,12 +199,10 @@ const appointmentsController = {
         appointments,
       });
     } catch (err) {
-      return errorHelper(
+      return errorHelper({
         res,
-        500,
-        "Erro interno",
-        err.message || "Não foi possível buscar os agendamentos."
-      );
+        ...CONFIG_PROPERTYSINTERNAL_ERROR_CONFIG,
+      });
     }
   },
   async rescheduleAppointment(req, res) {
@@ -195,51 +213,45 @@ const appointmentsController = {
     const { date } = req.body;
 
     if (!id) {
-      return errorHelper(
+      return errorHelper({
         res,
-        404,
-        "ID não encontrado",
-        "O ID não foi colocado corretamente na requisição."
-      );
+        ...ID_ERROR_CONFIG,
+      });
     }
 
     if (isNaN(new Date(date).getTime())) {
-      return errorHelper(
+      return errorHelper({
         res,
-        400,
-        "Data inválida",
-        "O formato da data está incorreto."
-      );
+        status: 400,
+        error: "Data inválida",
+        message: "O formato da data está incorreto.",
+      });
     }
 
     if (new Date().getTime() > new Date(date).getTime()) {
-      return errorHelper(
+      return errorHelper({
         res,
-        400,
-        "A data selecionada está no passado",
-        "Selecione uma data futura para agendar."
-      );
+        status: 400,
+        error: "A data selecionada está no passado",
+        message: "Selecione uma data futura para agendar.",
+      });
     }
 
     const existing = await Appointment.findById(id);
     if (!existing) {
-      return errorHelper(
+      return errorHelper({
         res,
-        404,
-        "Erro ao encontrar o agendamento",
-        "Certifique-se da validade do ID do agendamento."
-      );
+        ...FIND_APPOIMENT_ERROR_CONFIG,
+      });
     }
 
     let validateBy = verifyPolicy(existing, userId, role, CONFIG_PROPERTYS);
 
     if (!validateBy) {
-      return errorHelper(
+      return errorHelper({
         res,
-        401,
-        "O usuário não foi autorizado",
-        "Este usuário não pode alterar este agendamento."
-      );
+        ...VALIDATE_ERROR_CONFIG,
+      });
     }
 
     try {
@@ -254,12 +266,10 @@ const appointmentsController = {
       });
     } catch (err) {
       console.log(err);
-      return errorHelper(
+      return errorHelper({
         res,
-        500,
-        "Houve um erro interno",
-        "Tente novamente mais tarde."
-      );
+        ...INTERNAL_ERROR_CONFIG,
+      });
     }
   },
   async uncheckAppointment(req, res) {
@@ -270,22 +280,18 @@ const appointmentsController = {
     const existing = await Appointment.findById(id);
 
     if (!existing) {
-      return errorHelper(
+      return errorHelper({
         res,
-        404,
-        "Erro ao encontrar o agendamento",
-        "Certifique-se da validade do ID do agendamento."
-      );
+        ...FIND_APPOIMENT_ERROR_CONFIG,
+      });
     }
 
     let validateBy = verifyPolicy(existing, userId, role, CONFIG_PROPERTYS);
     if (!validateBy) {
-      return errorHelper(
+      return errorHelper({
         res,
-        401,
-        "O usuário não foi autorizado",
-        "Este usuário não pode alterar este agendamento."
-      );
+        ...VALIDATE_ERROR_CONFIG,
+      });
     }
     try {
       const updatedAppointment = await Appointment.findByIdAndUpdate(
@@ -299,12 +305,57 @@ const appointmentsController = {
       });
     } catch (err) {
       console.log(err);
-      return errorHelper(
+      return errorHelper({
         res,
-        500,
-        "Houve um erro interno",
-        "Tente novamente mais tarde."
+        ...INTERNAL_ERROR_CONFIG,
+      });
+    }
+  },
+  async scheduleAppointment(req, res) {
+    const { id } = req.params || req.body;
+    const userId = req.user.id;
+    const role = req.user.role;
+
+    if (!id) {
+      return errorHelper({
+        res,
+        ...ID_ERROR_CONFIG,
+      });
+    }
+    const existing = await Appointment.findById(id);
+
+    if (!existing) {
+      return errorHelper({
+        res,
+        ...FIND_APPOIMENT_ERROR_CONFIG,
+      });
+    }
+
+    const validateBy = verifyPolicy(existing, userId, role, CONFIG_PROPERTYS);
+
+    if (!validateBy) {
+      return errorHelper({ res, ...VALIDATE_ERROR_CONFIG });
+    }
+
+    try {
+      const updateState = await Appointment.findByIdAndUpdate(
+        id,
+        {
+          status: "agendado",
+        },
+        { new: true }
       );
+
+      res.status(200).json({
+        message: "O agendamento foi agendado com sucesso",
+        updateState,
+      });
+    } catch (err) {
+      console.log(err);
+      return errorHelper({
+        res,
+        ...INTERNAL_ERROR_CONFIG,
+      });
     }
   },
 };
