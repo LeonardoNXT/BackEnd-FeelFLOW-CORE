@@ -1,21 +1,14 @@
 const Appointment = require("../models/Appointments");
 const Employee = require("../models/Employee");
 const Customer = require("../models/Customer");
+const CONFIG_PROPERTYS = require("./logic/configPropertys");
+const verifyPolicy = require("./logic/verifyPolicy");
 
 function errorHelper(res, status, error, message) {
   return res.status(status).json({
     error: error,
     message: message,
   });
-}
-
-function verifyPolicy(existing, userId, role, config) {
-  // procura a regra de config correspondente ao role
-  const policy = config.find((c) => c.role === role);
-  if (!policy) return false;
-
-  const propertyValue = existing[policy.property];
-  return propertyValue?.equals(userId);
 }
 
 const appointmentsController = {
@@ -238,17 +231,6 @@ const appointmentsController = {
       );
     }
 
-    const CONFIG_PROPERTYS = [
-      {
-        role: "adm",
-        property: "organization",
-      },
-      {
-        role: "employee",
-        property: "createdBy",
-      },
-    ];
-
     let validateBy = verifyPolicy(existing, userId, role, CONFIG_PROPERTYS);
 
     if (!validateBy) {
@@ -296,12 +278,7 @@ const appointmentsController = {
       );
     }
 
-    let validateBy = false;
-    if (role === "adm") {
-      validateBy = existing.organization?.equals(userId);
-    } else if (role === "employee") {
-      validateBy = existing.createdBy?.equals(userId);
-    }
+    let validateBy = verifyPolicy(existing, userId, role, CONFIG_PROPERTYS);
     if (!validateBy) {
       return errorHelper(
         res,
