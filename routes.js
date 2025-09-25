@@ -56,6 +56,15 @@ route.patch(
   appointmentsController.uncheckAppointment
 );
 
+// Aceitar/Agendar
+
+route.patch(
+  "/appointments/schedule/:id",
+  checkToken,
+  authorize("patient"),
+  appointmentsController.scheduleAppointment
+);
+
 // para verificar se está logado FUNCIONARIO/ADM/CLIENTE
 route.post("/auth/verify", checkToken, userController.meUser);
 
