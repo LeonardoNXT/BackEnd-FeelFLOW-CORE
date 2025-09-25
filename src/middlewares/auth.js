@@ -26,17 +26,24 @@ module.exports = async (req, res, next) => {
     const decoded = jwt.verify(token, secret);
 
     let role = "patient"; // padrão
+    let organizationId = "";
     if (await Organization.findById(decoded.id)) {
       role = "adm";
+      const organization = await Organization.findById(decoded.id);
+      organizationId = organization._id;
     } else if (await Employees.findById(decoded.id)) {
       role = "employee";
+      const employee = await Employees.findById(decoded.id);
+      organizationId = employee.employee_of;
     } else if (await Customer.findById(decoded.id)) {
       role = "patient";
+      const patient = await Customer.findById(decoded.id);
+      organizationId = patient.client_of;
     }
 
-    console.log(role);
     req.user = {
       id: decoded.id,
+      organization: organizationId,
       role,
     };
 

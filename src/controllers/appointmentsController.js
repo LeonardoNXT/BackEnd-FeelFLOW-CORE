@@ -3,6 +3,8 @@ const Employee = require("../models/Employee");
 const Customer = require("../models/Customer");
 const CONFIG_PROPERTYS = require("./logic/configPropertys");
 const verifyPolicy = require("./logic/verifyPolicy");
+const SendNotification = require("./logic/sendNotification");
+const NOTIFICATION_CONFIG = require("./logic/notificationConfigAppoitments");
 
 function errorHelper({ res, status, error, message }) {
   return res.status(status).json({
@@ -38,6 +40,7 @@ const FIND_APPOIMENT_ERROR_CONFIG = {
 const appointmentsController = {
   async createAppointment(req, res) {
     const EmployeeId = req.user.id;
+    const { organization } = req.user;
     const { patientId, date } = req.body;
 
     if (!EmployeeId) {
@@ -111,6 +114,16 @@ const appointmentsController = {
         },
         { new: true }
       );
+
+      const createNotification = await SendNotification({
+        organization,
+        created_for: patientId,
+        ...NOTIFICATION_CONFIG.NOTIFICATION_CREATE_APPOINTMENT_PATIENT,
+      });
+
+      if (!createNotification) {
+        console.log("Houve um erro na criação da notificação do agendamento.");
+      }
 
       return res.status(201).json({
         message: `Seu agendamento foi cadastrado com sucesso para ${PatientUser.name}`,

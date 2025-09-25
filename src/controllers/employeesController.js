@@ -3,6 +3,7 @@ const jwt = require("jsonwebtoken");
 const cloudinary = require("cloudinary").v2;
 const Employee = require("../models/Employee"); // Ajuste o caminho conforme sua estrutura
 const Organization = require("../models/Organization");
+const SendNotification = require("./logic/sendNotification");
 
 // Configuração do Cloudinary
 cloudinary.config({
