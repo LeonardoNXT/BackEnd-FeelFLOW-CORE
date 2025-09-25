@@ -8,10 +8,20 @@ const employeesController = require("./src/controllers/employeesController");
 const customersController = require("./src/controllers/customersController");
 const appointmentsController = require("./src/controllers/appointmentsController");
 const { upload, handleMulterError } = require("./src/middlewares/upload");
+const notificationController = require("./src/controllers/NotificationController");
 
 route.get("/", (req, res) => {
   res.send("Bem vindo a NewArchAPI!");
 });
+
+// ---- Notificações ---- //
+
+route.post(
+  "/notification/all",
+  checkToken,
+  authorize("employee", "patient"),
+  notificationController.getAllNotificationsUser
+);
 
 // ---- Agendamento ---- ///
 

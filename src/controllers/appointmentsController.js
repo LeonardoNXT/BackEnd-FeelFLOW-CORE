@@ -6,13 +6,7 @@ const verifyPolicy = require("./logic/verifyPolicy");
 const SendNotification = require("./logic/sendNotification");
 const NOTIFICATION_CONFIG = require("./logic/notificationConfigAppoitments");
 const sendNotification = require("./logic/sendNotification");
-
-function errorHelper({ res, status, error, message }) {
-  return res.status(status).json({
-    error: error,
-    message: message,
-  });
-}
+const errorHelper = require("./logic/errorHelper");
 
 const INTERNAL_ERROR_CONFIG = {
   status: 500,
