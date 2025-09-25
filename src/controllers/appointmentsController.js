@@ -5,6 +5,7 @@ const CONFIG_PROPERTYS = require("./logic/configPropertys");
 const verifyPolicy = require("./logic/verifyPolicy");
 const SendNotification = require("./logic/sendNotification");
 const NOTIFICATION_CONFIG = require("./logic/notificationConfigAppoitments");
+const sendNotification = require("./logic/sendNotification");
 
 function errorHelper({ res, status, error, message }) {
   return res.status(status).json({
@@ -118,7 +119,7 @@ const appointmentsController = {
       const createNotification = await SendNotification({
         organization,
         created_for: patientId,
-        ...NOTIFICATION_CONFIG.NOTIFICATION_CREATE_APPOINTMENT_PATIENT,
+        ...NOTIFICATION_CONFIG.CREATE_APPOINTMENT_PATIENT,
       });
 
       if (!createNotification) {
@@ -222,6 +223,7 @@ const appointmentsController = {
     const { user } = req; // vem do middleware
     const userId = user.id;
     const role = user.role;
+    const { organization } = req.user;
     const id = req.params.id || req.body.id;
     const { date } = req.body;
 
@@ -273,6 +275,13 @@ const appointmentsController = {
         { date },
         { new: true }
       );
+
+      await SendNotification({
+        organization,
+        created_for: existing.intendedFor,
+        ...NOTIFICATION_CONFIG.RESCHEDULE_APPOINTMENT_PATIENT,
+      });
+
       res.status(200).json({
         message: "O agendamento foi alterado com sucesso",
         updatedAppointment,
@@ -289,7 +298,7 @@ const appointmentsController = {
     const userId = req.user.id;
     const role = req.user.role;
     const { id } = req.params || req.body;
-
+    const { organization } = req.user;
     const existing = await Appointment.findById(id);
 
     if (!existing) {
@@ -312,6 +321,11 @@ const appointmentsController = {
         { status: "cancelado" },
         { new: true }
       );
+      await sendNotification({
+        organization,
+        created_for: existing.intendedFor,
+        ...NOTIFICATION_CONFIG.UNCHECK_APPOINTMENT_PATIENT,
+      });
       res.status(200).json({
         message: "O agendamento foi desmarcado com sucesso",
         updatedAppointment,
@@ -328,6 +342,7 @@ const appointmentsController = {
     const { id } = req.params || req.body;
     const userId = req.user.id;
     const role = req.user.role;
+    const { organization } = req.user;
 
     if (!id) {
       return errorHelper({
@@ -358,6 +373,12 @@ const appointmentsController = {
         },
         { new: true }
       );
+
+      SendNotification({
+        organization,
+        created_for: existing.createdBy,
+        ...NOTIFICATION_CONFIG.SCHEDULE_APPOINTMENT_EMPLOYEE,
+      });
 
       res.status(200).json({
         message: "O agendamento foi agendado com sucesso",
