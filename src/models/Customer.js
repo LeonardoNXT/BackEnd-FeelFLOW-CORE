@@ -156,9 +156,9 @@ const customerSchema = new mongoose.Schema(
           type: String,
           enum: [
             "Feliz",
-            "Perfeito",
+            "Muito feliz",
             "Triste",
-            "Horrível",
+            "Muito triste",
             "Neutro",
             "Irritante",
             "Estressante",
@@ -181,9 +181,6 @@ const customerSchema = new mongoose.Schema(
         createdAt: {
           type: Date,
           default: Date.now,
-        },
-        address: {
-          type: String,
         },
       },
     ],

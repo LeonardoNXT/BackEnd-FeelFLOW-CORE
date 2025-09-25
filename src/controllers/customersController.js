@@ -4,6 +4,8 @@ const cloudinary = require("cloudinary").v2;
 const Customer = require("../models/Customer");
 const Employee = require("../models/Employee");
 const Organization = require("../models/Organization");
+const SendNotification = require("./logic/sendNotification");
+const NOTIFICATION_CONFIG = require("./logic/notificationConfigCostumer");
 require("../models/Appointments");
 
 // Configuração do Cloudinary
@@ -42,6 +44,7 @@ const customersController = {
   // Criar novo cliente/paciente
   async createCustomer(req, res) {
     try {
+      const { organization } = req.user;
       const { name, email, password, birth_date, patient_of } = req.body;
 
       console.log("📥 Dados recebidos:", {
@@ -144,6 +147,12 @@ const customersController = {
       // Criar cliente
       const newCustomer = new Customer(customerData);
       const savedCustomer = await newCustomer.save();
+
+      SendNotification({
+        organization,
+        created_for: savedCustomer.patient_of,
+        ...NOTIFICATION_CONFIG.CREATE_PATIENT_NOTIFICATION_EMPLOYEE,
+      });
 
       console.log("✅ Cliente salvo no banco:", savedCustomer._id);
 
