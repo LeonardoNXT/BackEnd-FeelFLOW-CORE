@@ -24,7 +24,7 @@ route.post(
 );
 
 route.post(
-  "/notification/read",
+  "/notification/read/:id",
   checkToken,
   authorize("patient", "employee"),
   notificationController.readNotification
