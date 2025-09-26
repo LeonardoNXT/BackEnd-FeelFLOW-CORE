@@ -23,6 +23,13 @@ route.post(
   notificationController.getAllNotificationsUser
 );
 
+route.post(
+  "/notification/read",
+  checkToken,
+  authorize("patient", "employee"),
+  notificationController.readNotification
+);
+
 // ---- Agendamento ---- ///
 
 // cria novos agendamentos
