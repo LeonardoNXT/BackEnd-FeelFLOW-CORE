@@ -7,6 +7,8 @@ const SendNotification = require("./logic/sendNotification");
 const NOTIFICATION_CONFIG = require("./logic/notificationConfigAppoitments");
 const sendNotification = require("./logic/sendNotification");
 const errorHelper = require("./logic/errorHelper");
+const GET_APPOINTMENTS_CONFIG = require("./logic/configGetAppointmentPerRole");
+const GetAppointments = require("./logic/getPerIDAndRole");
 
 const INTERNAL_ERROR_CONFIG = {
   status: 500,
@@ -283,6 +285,31 @@ const appointmentsController = {
     } catch (err) {
       console.log(err);
       return errorHelper({
+        res,
+        ...INTERNAL_ERROR_CONFIG,
+      });
+    }
+  },
+  async getUncheckedAppointments(req, res) {
+    const { id, role } = req.user;
+
+    try {
+      const uncheckedAppointments = await GetAppointments(
+        Appointment,
+        id,
+        role,
+        GET_APPOINTMENTS_CONFIG,
+        { status: "cancelado" }
+      );
+
+      res.status(200).json({
+        sucesso: "Os agendamentos cancelados foram enviados com sucesso",
+        total: uncheckedAppointments.length,
+        uncheckedAppointments,
+      });
+    } catch (err) {
+      console.log("Erro ao buscar agendamentos cancelados:", err);
+      errorHelper({
         res,
         ...INTERNAL_ERROR_CONFIG,
       });

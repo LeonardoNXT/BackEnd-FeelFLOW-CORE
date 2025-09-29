@@ -73,6 +73,15 @@ route.patch(
   appointmentsController.uncheckAppointment
 );
 
+// GET em todos os agendamentos cancelados
+
+route.post(
+  "/appointments/unchecked",
+  checkToken,
+  authorize("employee", "patient"),
+  appointmentsController.getUncheckedAppointments
+);
+
 // Aceitar/Agendar
 
 route.patch(
