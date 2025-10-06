@@ -3,7 +3,6 @@ const jwt = require("jsonwebtoken");
 const cloudinary = require("cloudinary").v2;
 const Employee = require("../models/Employee"); // Ajuste o caminho conforme sua estrutura
 const Organization = require("../models/Organization");
-const SendNotification = require("./logic/sendNotification");
 
 // Configuração do Cloudinary
 cloudinary.config({
@@ -13,25 +12,22 @@ cloudinary.config({
 });
 
 // Função para fazer upload no Cloudinary
-const uploadToCloudinary = (buffer, options = {}) => {
+const uploadToCloudinary = (buffer, mimetype, options = {}) => {
+  let resource_type = "raw"; // padrão para PDFs ou outros arquivos
+  if (mimetype.startsWith("image/")) resource_type = "image";
+  else if (mimetype.startsWith("video/")) resource_type = "video";
+
   return new Promise((resolve, reject) => {
     const uploadOptions = {
-      resource_type: "image",
-      folder: "employees/avatars",
-      transformation: [
-        { width: 400, height: 400, crop: "fill", gravity: "face" },
-        { quality: "auto", fetch_format: "auto" },
-      ],
+      resource_type,
+      folder: resource_type === "image" ? "employees/avatars" : "tasks/files",
       ...options,
     };
 
     cloudinary.uploader
       .upload_stream(uploadOptions, (error, result) => {
-        if (error) {
-          reject(error);
-        } else {
-          resolve(result);
-        }
+        if (error) reject(error);
+        else resolve(result);
       })
       .end(buffer);
   });

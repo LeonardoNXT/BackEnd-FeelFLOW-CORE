@@ -7,7 +7,12 @@ const iaController = require("./src/controllers/iaController");
 const employeesController = require("./src/controllers/employeesController");
 const customersController = require("./src/controllers/customersController");
 const appointmentsController = require("./src/controllers/appointmentsController");
-const { upload, handleMulterError } = require("./src/middlewares/upload");
+const tasksController = require("./src/controllers/tasksController");
+const {
+  upload,
+  handleMulterError,
+  uploadTask,
+} = require("./src/middlewares/upload");
 const notificationController = require("./src/controllers/NotificationController");
 
 route.get("/", (req, res) => {
@@ -89,6 +94,17 @@ route.patch(
   checkToken,
   authorize("patient"),
   appointmentsController.scheduleAppointment
+);
+
+// ---- TAREFAS ---- //
+
+route.post(
+  "/tasks/create",
+  checkToken,
+  authorize("employee"),
+  uploadTask.single("archive"),
+  handleMulterError,
+  tasksController.createTask
 );
 
 // para verificar se está logado FUNCIONARIO/ADM/CLIENTE
