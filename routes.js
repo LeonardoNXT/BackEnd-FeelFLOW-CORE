@@ -74,7 +74,7 @@ route.patch(
 route.patch(
   "/appointments/uncheck/:id",
   checkToken,
-  authorize("employee", "adm"),
+  authorize("employee", "patient", "adm"),
   appointmentsController.uncheckAppointment
 );
 
