@@ -184,6 +184,7 @@ const appointmentsController = {
       if (role === "patient") {
         appointments = await Appointment.find({
           intendedFor: userId,
+          status: "pendente",
           date: { $gt: new Date() },
         })
           .populate("createdBy", "name avatar")
