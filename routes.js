@@ -98,6 +98,8 @@ route.patch(
 
 // ---- TAREFAS ---- //
 
+// criar tarefas
+
 route.post(
   "/tasks/create",
   checkToken,
@@ -105,6 +107,15 @@ route.post(
   uploadTask.single("archive"),
   handleMulterError,
   tasksController.createTask
+);
+
+// GET de todas as tarefas pendentes
+
+route.post(
+  "/tasks/pending",
+  checkToken,
+  authorize("employee", "patient"),
+  tasksController.getALLPendingTasks
 );
 
 // para verificar se está logado FUNCIONARIO/ADM/CLIENTE

@@ -194,6 +194,35 @@ const tasksController = {
       return ErrorHelper({ res, ...ERROR_CONFIG.INTERNAL });
     }
   },
+  async getALLPendingTasks(req, res) {
+    const userId = req.user.id;
+    const { role } = req.user;
+
+    let pendingTasks = null;
+
+    try {
+      if (role === "employee") {
+        pendingTasks = await Tasks.find({
+          createdBy: userId,
+          status: "pending",
+        }).populate("intendedFor", "avatar name");
+      } else if (role == "patient") {
+        pendingTasks = await Tasks.find({
+          intendedFor: userId,
+          status: "pending",
+        }).populate("createdBy", "avatar name");
+      }
+      const total = pendingTasks ? pendingTasks.length : 0;
+      return res.status(200).json({
+        message: "Os agendamentos pendentes foram listados com sucesso.",
+        pendingTasks,
+        total: total,
+      });
+    } catch (err) {
+      console.log(err);
+      ErrorHelper({ res, ...ERROR_CONFIG.INTERNAL });
+    }
+  },
 };
 
 module.exports = tasksController;
