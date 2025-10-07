@@ -350,6 +350,11 @@ const appointmentsController = {
         created_for: existing.intendedFor,
         ...NOTIFICATION_CONFIG.UNCHECK_APPOINTMENT_PATIENT,
       });
+      await sendNotification({
+        organization,
+        created_for: existing.createdBy,
+        ...NOTIFICATION_CONFIG.UNCHECK_APPOINTMENT_PATIENT,
+      });
       res.status(200).json({
         message: "O agendamento foi desmarcado com sucesso",
         updatedAppointment,
