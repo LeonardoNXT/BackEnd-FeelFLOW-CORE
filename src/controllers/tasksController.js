@@ -205,12 +205,22 @@ const tasksController = {
         pendingTasks = await Tasks.find({
           createdBy: userId,
           status: "pending",
-        }).populate("intendedFor", "avatar name");
+          completionDate: {
+            $gt: new Date(),
+          },
+        })
+          .populate("intendedFor", "avatar name")
+          .sort({ completionDate: 1 });
       } else if (role == "patient") {
         pendingTasks = await Tasks.find({
           intendedFor: userId,
           status: "pending",
-        }).populate("createdBy", "avatar name");
+          completionDate: {
+            $gt: new Date(),
+          },
+        })
+          .populate("createdBy", "avatar name")
+          .sort({ completionDate: -1 });
       }
       const total = pendingTasks ? pendingTasks.length : 0;
       return res.status(200).json({
