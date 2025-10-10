@@ -31,21 +31,32 @@ module.exports = async (req, res, next) => {
       role = "adm";
       const organization = await Organization.findById(decoded.id);
       organizationId = organization._id;
+      req.user = {
+        id: decoded.id,
+        organization: organizationId,
+        role,
+      };
     } else if (await Employees.findById(decoded.id)) {
       role = "employee";
       const employee = await Employees.findById(decoded.id);
       organizationId = employee.employee_of;
+      req.user = {
+        id: decoded.id,
+        organization: organizationId,
+        role,
+      };
     } else if (await Customer.findById(decoded.id)) {
       role = "patient";
       const patient = await Customer.findById(decoded.id);
       organizationId = patient.client_of;
+      let patient_of = patient.patient_of;
+      req.user = {
+        id: decoded.id,
+        organization: organizationId,
+        role,
+        patient_of,
+      };
     }
-
-    req.user = {
-      id: decoded.id,
-      organization: organizationId,
-      role,
-    };
 
     next();
   } catch (err) {

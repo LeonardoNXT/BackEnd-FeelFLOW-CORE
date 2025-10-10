@@ -39,11 +39,12 @@ route.post(
 
 // cria novos agendamentos
 route.post(
-  "/appointments/create",
+  "/appointments/availability/create",
   checkToken,
-  authorize("employee", "patient"),
-  appointmentsController.createAppointment
+  authorize("employee"),
+  appointmentsController.createAvailability
 );
+
 // pega todos os agendamentos daquele adm
 route.post(
   "/appointments/all",
@@ -55,27 +56,36 @@ route.post(
 // pega todos os agendamentos pendentes
 
 route.post(
-  "/appointments/pending",
+  "/appointments/availability/all",
   checkToken,
   authorize("employee", "patient"),
-  appointmentsController.getPedingAppointments
+  appointmentsController.getAvailables
+);
+
+// pega todos os agendamentos confirmados
+
+route.post(
+  "/appointments/all/schedule",
+  checkToken,
+  authorize("employee", "patient"),
+  appointmentsController.getAllConfirmAppointments
 );
 
 //Altera a data do agendamento
 
 route.patch(
-  "/appointments/reschedule/:id",
+  "/appointments/availability/update",
   checkToken,
-  authorize("adm", "employee"),
-  appointmentsController.rescheduleAppointment
+  authorize("employee"),
+  appointmentsController.updateAvailability
 );
 
 // Cancelar o agendamento selecionado
-route.patch(
-  "/appointments/uncheck/:id",
+route.post(
+  "/appointments/availability/delete",
   checkToken,
-  authorize("employee", "patient", "adm"),
-  appointmentsController.uncheckAppointment
+  authorize("employee"),
+  appointmentsController.deleteAvailability
 );
 
 // GET em todos os agendamentos cancelados
