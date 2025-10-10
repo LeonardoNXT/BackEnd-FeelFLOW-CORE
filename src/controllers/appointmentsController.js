@@ -157,7 +157,7 @@ const appointmentsController = {
       } else if (role === "patient") {
         // Paciente vê todas as disponibilidades gerais
         query = {
-          createdBy: patient_of,
+          createdBy: createdBy,
           status: "disponivel",
           startTime: { $gt: new Date() },
         };
