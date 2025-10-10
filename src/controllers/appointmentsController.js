@@ -364,7 +364,7 @@ const appointmentsController = {
     }
   },
   async scheduleAppointment(req, res) {
-    const { id } = req.params || req.body;
+    const { id } = req.body;
     const userId = req.user.id;
     const role = req.user.role;
     const { organization } = req.user;
@@ -395,6 +395,7 @@ const appointmentsController = {
         id,
         {
           status: "agendado",
+          intendedFor: userId,
         },
         { new: true }
       );
