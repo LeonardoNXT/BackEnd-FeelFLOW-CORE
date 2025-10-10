@@ -364,7 +364,7 @@ const appointmentsController = {
     }
   },
   async scheduleAppointment(req, res) {
-    const { id } = req.body;
+    const id = req.body.id;
     const userId = req.user.id;
     const role = req.user.role;
     const { organization } = req.user;
