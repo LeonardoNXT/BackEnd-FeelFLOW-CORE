@@ -369,8 +369,6 @@ const appointmentsController = {
     const role = req.user.role;
     const { organization } = req.user;
 
-    console.log("[ID DO PACIENTE] : ", id);
-
     if (!id) {
       return errorHelper({
         res,
@@ -384,12 +382,6 @@ const appointmentsController = {
         res,
         ...FIND_APPOIMENT_ERROR_CONFIG,
       });
-    }
-
-    const validateBy = verifyPolicy(existing, userId, role, CONFIG_PROPERTYS);
-
-    if (!validateBy) {
-      return errorHelper({ res, ...VALIDATE_ERROR_CONFIG });
     }
 
     try {
