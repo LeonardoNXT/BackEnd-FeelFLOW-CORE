@@ -369,6 +369,8 @@ const appointmentsController = {
     const role = req.user.role;
     const { organization } = req.user;
 
+    console.log("[ID DO PACIENTE] : ", id);
+
     if (!id) {
       return errorHelper({
         res,
