@@ -142,7 +142,7 @@ const appointmentsController = {
     const { user } = req;
     const userId = user.id;
     const role = user.role;
-    const createdBy = user.patient;
+    const createdBy = user.patient_of;
 
     try {
       let query = {};
