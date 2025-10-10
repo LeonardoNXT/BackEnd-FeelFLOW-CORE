@@ -100,7 +100,7 @@ route.post(
 // Aceitar/Agendar
 
 route.patch(
-  "/appointments/schedule/",
+  "/appointments/schedule",
   checkToken,
   authorize("patient"),
   appointmentsController.scheduleAppointment
