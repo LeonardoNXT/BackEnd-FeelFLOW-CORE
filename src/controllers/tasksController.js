@@ -194,9 +194,11 @@ const tasksController = {
       return ErrorHelper({ res, ...ERROR_CONFIG.INTERNAL });
     }
   },
+  // ✅ VERSÃO CORRIGIDA - Remove duplicação de código
+
   async createPatientResponse(req, res) {
     const { taskId, title, description } = req.body;
-    const patientId = req.user.id; // ID do paciente autenticado
+    const patientId = req.user.id;
 
     // Validação dos campos obrigatórios
     if (!taskId || !title || !description) {
@@ -265,10 +267,10 @@ const tasksController = {
               archive_type: "video",
               public_id: fullPublicId,
               url: predictedUrl,
-              processing: true,
+              processing: true, // ✅ Flag de processamento
             };
 
-            // Adiciona a resposta com vídeo em processamento
+            // ✅ Adiciona a resposta com vídeo em processamento
             task.content_of_response = {
               title,
               description,
@@ -277,15 +279,15 @@ const tasksController = {
             task.status = "complete";
             await task.save();
 
-            // Upload em background
+            // ✅ Upload em background (não bloqueia resposta)
             uploadToCloudinary(req.file, { public_id: publicId })
               .then(async (result) => {
-                // Atualiza com URL real
+                // Atualiza com URL real do Cloudinary
                 task.content_of_response.archive = {
                   archive_type: result.resource_type,
                   public_id: result.public_id,
                   url: result.secure_url,
-                  processing: false,
+                  processing: false, // ✅ Processamento concluído
                 };
                 await task.save();
                 console.log(
@@ -300,6 +302,7 @@ const tasksController = {
                 );
               });
 
+            // ✅ RETORNA IMEDIATAMENTE (vídeo processa em background)
             return res.status(201).json({
               message:
                 "Resposta criada! O vídeo estará disponível em instantes.",
@@ -308,22 +311,24 @@ const tasksController = {
             });
           }
 
-          // Upload de PDF
+          // ✅ Upload de PDF (síncrono)
           if (req.file.mimetype === "application/pdf") {
             const uploadPDF = await uploadPDFToSupabase(req.file);
             archive = {
               archive_type: uploadPDF.format,
               public_id: uploadPDF.public_id,
               url: uploadPDF.url,
+              processing: false, // PDF já está disponível
             };
           } else {
-            // Upload de outros arquivos (imagens, etc)
+            // ✅ Upload de imagens e outros arquivos (síncrono)
             const resultUploadArchive = await uploadToCloudinary(req.file);
 
             archive = {
               archive_type: resultUploadArchive.resource_type,
               public_id: resultUploadArchive.public_id,
               url: resultUploadArchive.secure_url,
+              processing: false, // Arquivo já está disponível
             };
           }
 
@@ -334,7 +339,7 @@ const tasksController = {
         }
       }
 
-      // Adiciona a resposta à tarefa
+      // ✅ Adiciona a resposta à tarefa (para arquivos não-vídeo ou sem arquivo)
       task.content_of_response = {
         title,
         description,
@@ -343,6 +348,7 @@ const tasksController = {
       task.status = "complete";
       await task.save();
 
+      // ✅ Resposta de sucesso padrão
       res.status(201).json({
         message: "Sua resposta foi adicionada com sucesso.",
         task,
