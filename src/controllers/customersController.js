@@ -727,17 +727,7 @@ const customersController = {
         });
       }
 
-      // Verificar se o usuário está autenticado
-      if (!req.user || !req.user.id) {
-        return res.status(401).json({
-          error: "Usuário não autenticado",
-        });
-      }
-
-      const customer = await Customer.findOne({
-        _id: id,
-        client_of: req.user.id,
-      });
+      const customer = await Customer.findById(id);
 
       if (!customer) {
         return res.status(404).json({
