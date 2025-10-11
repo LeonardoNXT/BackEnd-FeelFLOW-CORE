@@ -1,5 +1,18 @@
 const mongoose = require("mongoose");
 
+const responseSchema = new mongoose.Schema(
+  {
+    title: String,
+    description: String,
+    archive: {
+      archive_type: String,
+      public_id: String,
+      url: String,
+    },
+  },
+  { _id: false }
+); // evita criar _id dentro de content_of_response
+
 const TasksSchema = new mongoose.Schema(
   {
     status: {
@@ -7,14 +20,8 @@ const TasksSchema = new mongoose.Schema(
       enum: ["pending", "complete"],
       default: "pending",
     },
-    title: {
-      type: String,
-      required: true,
-    },
-    description: {
-      type: String,
-      required: true,
-    },
+    title: { type: String, required: true },
+    description: { type: String, required: true },
     steps: {
       type: {
         list: [{ type: String }],
@@ -47,16 +54,18 @@ const TasksSchema = new mongoose.Schema(
         public_id: String,
         url: String,
       },
-      default: null, // permite que não exista
+      default: null,
+    },
+    content_of_response: {
+      type: responseSchema,
+      default: null, // agora é realmente opcional
     },
     completionDate: {
       type: Date,
       required: true,
     },
   },
-  {
-    timestamps: true,
-  }
+  { timestamps: true }
 );
 
 const taskModel = mongoose.model("Task", TasksSchema);

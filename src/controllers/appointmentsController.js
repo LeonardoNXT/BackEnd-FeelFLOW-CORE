@@ -425,7 +425,7 @@ const appointmentsController = {
         existing = await Appointment.find({
           createdBy: userId,
           status: "agendado",
-          date: { $gt: now },
+          startTime: { $gt: now },
         })
           .populate("intendedFor", "name avatar")
           .sort({ date: 1 });
@@ -434,7 +434,7 @@ const appointmentsController = {
         existing = await Appointment.find({
           intendedFor: userId,
           status: "agendado",
-          date: { $gt: now },
+          startTime: { $gt: now },
         })
           .populate("createdBy", "name avatar")
           .sort({ date: 1 });

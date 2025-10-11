@@ -194,6 +194,164 @@ const tasksController = {
       return ErrorHelper({ res, ...ERROR_CONFIG.INTERNAL });
     }
   },
+  async createPatientResponse(req, res) {
+    const { taskId, title, description } = req.body;
+    const patientId = req.user.id; // ID do paciente autenticado
+
+    // Validação dos campos obrigatórios
+    if (!taskId || !title || !description) {
+      return ErrorHelper({ res, ...ERROR_CONFIG.MISSING_BODY });
+    }
+
+    try {
+      // Busca a tarefa
+      const task = await Tasks.findById(taskId);
+
+      if (!task) {
+        return ErrorHelper({
+          res,
+          status: 404,
+          message: "Tarefa não encontrada.",
+        });
+      }
+
+      // Verifica se a tarefa é destinada ao paciente autenticado
+      if (task.intendedFor.toString() !== patientId.toString()) {
+        return ErrorHelper({
+          res,
+          status: 403,
+          message: "Você não tem permissão para responder esta tarefa.",
+        });
+      }
+
+      // Verifica se já existe uma resposta
+      if (task.content_of_response) {
+        return ErrorHelper({
+          res,
+          status: 400,
+          message: "Esta tarefa já possui uma resposta.",
+        });
+      }
+
+      let archive = null;
+
+      // Processamento do arquivo anexado (se existir)
+      if (req.file) {
+        const isVideo = req.file.mimetype.startsWith("video/");
+
+        console.log("\n=== INICIANDO UPLOAD DA RESPOSTA ===");
+        console.log("Arquivo:", {
+          nome: req.file.originalname,
+          tipo: req.file.mimetype,
+          tamanho: (req.file.size / (1024 * 1024)).toFixed(2) + "MB",
+        });
+
+        try {
+          if (isVideo) {
+            console.log(
+              "[VÍDEO] Processando em background (não trava resposta)..."
+            );
+
+            const publicId = `task_response_${taskId}_${Date.now()}_${Math.random()
+              .toString(36)
+              .substring(2, 9)}`;
+            const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+            const folder = "tasks/responses";
+            const fullPublicId = `${folder}/${publicId}`;
+
+            const predictedUrl = `https://res.cloudinary.com/${cloudName}/video/upload/${fullPublicId}.mp4`;
+
+            archive = {
+              archive_type: "video",
+              public_id: fullPublicId,
+              url: predictedUrl,
+              processing: true,
+            };
+
+            // Adiciona a resposta com vídeo em processamento
+            task.content_of_response = {
+              title,
+              description,
+              archive,
+            };
+            task.status = "complete";
+            await task.save();
+
+            // Upload em background
+            uploadToCloudinary(req.file, { public_id: publicId })
+              .then(async (result) => {
+                // Atualiza com URL real
+                task.content_of_response.archive = {
+                  archive_type: result.resource_type,
+                  public_id: result.public_id,
+                  url: result.secure_url,
+                  processing: false,
+                };
+                await task.save();
+                console.log(
+                  "[BACKGROUND] Upload concluído e resposta atualizada!"
+                );
+                console.log(`[BACKGROUND] URL final: ${result.secure_url}`);
+              })
+              .catch((err) => {
+                console.error(
+                  "[BACKGROUND] Erro no upload (mas resposta já foi criada):",
+                  err
+                );
+              });
+
+            return res.status(201).json({
+              message:
+                "Resposta criada! O vídeo estará disponível em instantes.",
+              task,
+              videoProcessing: true,
+            });
+          }
+
+          // Upload de PDF
+          if (req.file.mimetype === "application/pdf") {
+            const uploadPDF = await uploadPDFToSupabase(req.file);
+            archive = {
+              archive_type: uploadPDF.format,
+              public_id: uploadPDF.public_id,
+              url: uploadPDF.url,
+            };
+          } else {
+            // Upload de outros arquivos (imagens, etc)
+            const resultUploadArchive = await uploadToCloudinary(req.file);
+
+            archive = {
+              archive_type: resultUploadArchive.resource_type,
+              public_id: resultUploadArchive.public_id,
+              url: resultUploadArchive.secure_url,
+            };
+          }
+
+          console.log("=== UPLOAD CONCLUÍDO ===\n");
+        } catch (err) {
+          console.error("[ERRO CRÍTICO] Falha no upload:", err);
+          return ErrorHelper({ res, ...ERROR_CONFIG.CLOUDINARY_UPLOAD });
+        }
+      }
+
+      // Adiciona a resposta à tarefa
+      task.content_of_response = {
+        title,
+        description,
+        archive,
+      };
+      task.status = "complete";
+      await task.save();
+
+      res.status(201).json({
+        message: "Sua resposta foi adicionada com sucesso.",
+        task,
+      });
+    } catch (err) {
+      console.error("Erro ao criar resposta do paciente:", err);
+      return ErrorHelper({ res, ...ERROR_CONFIG.INTERNAL });
+    }
+  },
   async getALLPendingTasks(req, res) {
     const userId = req.user.id;
     const { role } = req.user;

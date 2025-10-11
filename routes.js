@@ -128,6 +128,17 @@ route.post(
   tasksController.getALLPendingTasks
 );
 
+// ENVIAR TAREFA (PACIENTE)
+
+route.post(
+  "/tasks/response",
+  checkToken,
+  authorize("patient"),
+  uploadTask.single("archive"),
+  handleMulterError,
+  tasksController.createPatientResponse
+);
+
 // para verificar se está logado FUNCIONARIO/ADM/CLIENTE
 route.post("/auth/verify", checkToken, userController.meUser);
 
