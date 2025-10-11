@@ -784,6 +784,9 @@ const customersController = {
           client_of: userId,
         });
       }
+      if (role == "patient") {
+        customer = await Customer.findById(userId);
+      }
 
       if (!customer) {
         return res.status(404).json({

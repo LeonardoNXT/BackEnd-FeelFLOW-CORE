@@ -286,7 +286,7 @@ route.post(
 route.post(
   "/customers/get/mood-diary",
   checkToken,
-  authorize("adm", "employee"),
+  authorize("adm", "employee", "patient"),
   customersController.getMoodDiary
 );
 
