@@ -770,7 +770,7 @@ const customersController = {
       const { role } = req.user;
       const { id } = req.body;
 
-      const customer = null;
+      let customer = null;
 
       if (role === "employee") {
         customer = await Customer.findOne({
