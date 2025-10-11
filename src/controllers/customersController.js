@@ -766,19 +766,24 @@ const customersController = {
   // Obter diário de humor
   async getMoodDiary(req, res) {
     try {
-      const { id } = req.params;
+      const userId = req.user.id;
+      const { role } = req.user;
+      const { id } = req.body;
 
-      // Verificar se o usuário está autenticado
-      if (!req.user || !req.user.id) {
-        return res.status(401).json({
-          error: "Usuário não autenticado",
+      const customer = null;
+
+      if (role === "employee") {
+        customer = await Customer.findOne({
+          _id: id,
+          patient_of: userId,
         });
       }
-
-      const customer = await Customer.findOne({
-        _id: id,
-        client_of: req.user.id,
-      }).select("mood_diary name");
+      if (role == "adm") {
+        customer = await Customer.findOne({
+          _id: id,
+          client_of: userId,
+        });
+      }
 
       if (!customer) {
         return res.status(404).json({
