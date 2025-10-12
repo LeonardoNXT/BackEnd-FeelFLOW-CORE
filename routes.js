@@ -71,6 +71,15 @@ route.post(
   appointmentsController.getAllConfirmAppointments
 );
 
+// pega todos os agendamentos confirmados no passado sem alteração de status.
+
+route.post(
+  "/appointments/all/past/schedule",
+  checkToken,
+  authorize("employee", "patient"),
+  appointmentsController.getAllPastConfirmAppointments
+);
+
 //Altera a data do agendamento
 
 route.patch(

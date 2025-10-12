@@ -9,13 +9,13 @@ const sendNotification = require("./logic/sendNotification");
 const errorHelper = require("./logic/errorHelper");
 const GET_APPOINTMENTS_CONFIG = require("./logic/configGetAppointmentPerRole");
 const GetAppointments = require("./logic/getPerIDAndRole");
+const DefaultSendEmail = require("./logic/emailsend");
 
 const INTERNAL_ERROR_CONFIG = {
   status: 500,
   error: "Erro interno",
   message: "Tente Novamente mais tarde.",
 };
-
 const VALIDATE_ERROR_CONFIG = {
   status: 401,
   error: "O usuário não foi autorizado.",
@@ -171,9 +171,11 @@ const appointmentsController = {
 
       const appointments = await Appointment.find(query)
         .populate("createdBy", "name avatar")
-        .populate("organization", "name")
+        .populate("organization", "name avatar")
         .populate("intendedFor", "name avatar")
         .sort({ startTime: 1 });
+
+      const firstAppointment = appointments[0];
 
       return res.status(200).json({
         message: "Disponibilidades carregadas com sucesso.",
@@ -445,6 +447,41 @@ const appointmentsController = {
         appointments: existing,
       });
     } catch (er) {
+      console.log(err);
+      errorHelper({ res, ...INTERNAL_ERROR_CONFIG });
+    }
+  },
+  async getAllPastConfirmAppointments(req, res) {
+    const userId = req.user.id;
+    const { role } = req.user;
+    const now = new Date();
+    try {
+      const appointments = await GetAppointments(
+        Appointment,
+        userId,
+        role,
+        GET_APPOINTMENTS_CONFIG,
+        {
+          status: "agendado",
+          startTime: { $lt: now },
+          endTime: { $lt: now },
+        },
+        [
+          { path: "createdBy", select: "name avatar" },
+          { path: "intendedFor", select: "name avatar" },
+        ]
+      );
+      if (!appointments.length) {
+        return res.status(200).json({
+          message: "Nenhum agendamento passado foi encontrado.",
+          appointments: [],
+        });
+      }
+      res.status(200).json({
+        message: "Os agendamentos confirmados foram listados com sucesso.",
+        appointments,
+      });
+    } catch (err) {
       console.log(err);
       errorHelper({ res, ...INTERNAL_ERROR_CONFIG });
     }

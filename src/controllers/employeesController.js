@@ -42,7 +42,6 @@ const employeesController = {
         name,
         email,
         birthday,
-        rg,
         cpf,
         phone,
         address,
@@ -60,7 +59,6 @@ const employeesController = {
         !name ||
         !email ||
         !birthday ||
-        !rg ||
         !cpf ||
         !phone ||
         !address ||
@@ -73,7 +71,6 @@ const employeesController = {
             name: !name,
             email: !email,
             birthday: !birthday,
-            rg: !rg,
             cpf: !cpf,
             phone: !phone,
             address: !address,
@@ -109,7 +106,6 @@ const employeesController = {
         $or: [
           { email: email.toLowerCase() },
           { cpf: cpf.replace(/[^\d]/g, "") },
-          { rg: rg.replace(/[.\-\s]/g, "") },
         ],
       });
 
@@ -128,7 +124,6 @@ const employeesController = {
         name: name.trim(),
         email: email.toLowerCase().trim(),
         birthday: new Date(birthday),
-        rg: rg.replace(/[.\-\s]/g, ""),
         cpf: cpf.replace(/[^\d]/g, ""),
         phone: phone.replace(/\D/g, ""),
         address: address.trim(),
