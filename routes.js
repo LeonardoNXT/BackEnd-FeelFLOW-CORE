@@ -89,12 +89,21 @@ route.patch(
   appointmentsController.updateAvailability
 );
 
-// Cancelar o agendamento selecionado
+// DELETAR o agendamento selecionado
 route.post(
   "/appointments/availability/delete",
   checkToken,
   authorize("employee"),
   appointmentsController.deleteAvailability
+);
+
+// CANCELAR o agendamento selecionado.
+
+route.patch(
+  "/appointments/cancel",
+  checkToken,
+  authorize("patient", "adm", "employee"),
+  appointmentsController.cancelScheduleAppointments
 );
 
 // GET em todos os agendamentos cancelados
@@ -113,6 +122,15 @@ route.patch(
   checkToken,
   authorize("patient"),
   appointmentsController.scheduleAppointment
+);
+
+// CONCLUIR AGEDAMENTO
+
+route.patch(
+  "/appointments/complete",
+  checkToken,
+  authorize("employee"),
+  appointmentsController.completeAppointment
 );
 
 // ---- TAREFAS ---- //

@@ -31,4 +31,16 @@ module.exports = {
       "Um novo agendamento confirmado está disponível na área de agendamentos.",
     ...EMPLOYEE_APPOINTMENTS_NOTIFICATION,
   },
+  COMPLETE_APPOINTMENT_EMPLOYEE: {
+    title: "Há um novo agendamento completo",
+    summary:
+      "Um novo agendamento concluído está disponível na área de agendamentos.",
+    ...EMPLOYEE_APPOINTMENTS_NOTIFICATION,
+  },
+  COMPLETE_APPOINTMENT_PATIENT: {
+    title: "Há um novo agendamento completo",
+    summary:
+      "Um novo agendamento concluído está disponível na área de agendamentos.",
+    ...PATIENT_APPOINTMENTS_NOTIFICATION,
+  },
 };

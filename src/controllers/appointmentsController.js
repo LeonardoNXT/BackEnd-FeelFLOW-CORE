@@ -10,6 +10,8 @@ const errorHelper = require("./logic/errorHelper");
 const GET_APPOINTMENTS_CONFIG = require("./logic/configGetAppointmentPerRole");
 const GetAppointments = require("./logic/getPerIDAndRole");
 const DefaultSendEmail = require("./logic/emailsend");
+const getPerIDAndRole = require("./logic/getPerIDAndRole");
+const mongoose = require("mongoose");
 
 const INTERNAL_ERROR_CONFIG = {
   status: 500,
@@ -365,6 +367,88 @@ const appointmentsController = {
       });
     }
   },
+  async cancelScheduleAppointments(req, res) {
+    const userID = req.user.id;
+    const { role } = req.user;
+    const id = req.body.id;
+
+    console.log("[CANCEL SCHEDULE]", {
+      APPOINTMENT_ID: id,
+      role,
+      USER_ID: userID,
+    });
+
+    if (!id) {
+      return errorHelper({ res, ...ID_ERROR_CONFIG });
+    }
+
+    let appointmentFind = null;
+
+    switch (role) {
+      case "adm":
+        appointmentFind = await Appointment.findOne({
+          _id: id,
+          organization: userID,
+        });
+        break;
+      case "employee":
+        console.log("[EMPLOYEE]");
+        appointmentFind = await Appointment.findOne({
+          _id: id,
+          createdBy: userID,
+        });
+        break;
+      default:
+        appointmentFind = await Appointment.findOne({
+          _id: id,
+          intendedFor: userID,
+        });
+    }
+
+    if (!appointmentFind) {
+      return errorHelper({ res, ...FIND_APPOIMENT_ERROR_CONFIG });
+    }
+
+    if (
+      appointmentFind.status === "pendente" ||
+      appointmentFind.status === "cancelado" ||
+      appointmentFind.status === "concluido"
+    ) {
+      return errorHelper({
+        res,
+        ...FIND_APPOIMENT_ERROR_CONFIG,
+        message: `O agendamento não pode ter seu estado alterado. Ele está ${appointmentFind.status}`,
+      });
+    }
+
+    try {
+      const updatedAppointment = await Appointment.findByIdAndUpdate(
+        id,
+        {
+          status: "cancelado",
+        },
+        { new: true }
+      );
+
+      await SendNotification({
+        organization: updatedAppointment.organization,
+        created_for: updatedAppointment.intendedFor,
+        ...NOTIFICATION_CONFIG.UNCHECK_APPOINTMENT_PATIENT,
+      });
+      await SendNotification({
+        organization: updatedAppointment.organization,
+        created_for: updatedAppointment.createdBy,
+        ...NOTIFICATION_CONFIG.UNCHECK_APPOINTMENT_PATIENT,
+      });
+      res.status(200).json({
+        message: "[SUCESSO] : O agendamento foi cancelado com sucesso!",
+        appointment: updatedAppointment,
+      });
+    } catch (err) {
+      console.log(err);
+      return errorHelper({ res, ...INTERNAL_ERROR_CONFIG });
+    }
+  },
   async scheduleAppointment(req, res) {
     const id = req.body.id;
     const userId = req.user.id;
@@ -406,6 +490,7 @@ const appointmentsController = {
         message: "O agendamento foi agendado com sucesso",
         updateState,
       });
+      r;
     } catch (err) {
       console.log(err);
       return errorHelper({
@@ -484,6 +569,88 @@ const appointmentsController = {
     } catch (err) {
       console.log(err);
       errorHelper({ res, ...INTERNAL_ERROR_CONFIG });
+    }
+  },
+  async completeAppointment(req, res) {
+    const userID = req.user.id;
+    const { role } = req.user;
+    const id = req.body.id;
+
+    console.log("[COMPLTE SCHEDULE]", {
+      APPOINTMENT_ID: id,
+      role,
+      USER_ID: userID,
+    });
+
+    if (!id) {
+      return errorHelper({ res, ...ID_ERROR_CONFIG });
+    }
+
+    let appointmentFind = null;
+
+    switch (role) {
+      case "adm":
+        appointmentFind = await Appointment.findOne({
+          _id: id,
+          organization: userID,
+        });
+        break;
+      case "employee":
+        console.log("[EMPLOYEE]");
+        appointmentFind = await Appointment.findOne({
+          _id: id,
+          createdBy: userID,
+        });
+        break;
+      default:
+        appointmentFind = await Appointment.findOne({
+          _id: id,
+          intendedFor: userID,
+        });
+    }
+
+    if (!appointmentFind) {
+      return errorHelper({ res, ...FIND_APPOIMENT_ERROR_CONFIG });
+    }
+
+    if (
+      appointmentFind.status === "pendente" ||
+      appointmentFind.status === "cancelado" ||
+      appointmentFind.status === "concluido"
+    ) {
+      return errorHelper({
+        res,
+        ...FIND_APPOIMENT_ERROR_CONFIG,
+        message: `O agendamento não pode ter seu estado alterado. Ele está ${appointmentFind.status}`,
+      });
+    }
+
+    try {
+      const updatedAppointment = await Appointment.findByIdAndUpdate(
+        id,
+        {
+          status: "concluido",
+        },
+        { new: true }
+      );
+
+      await SendNotification({
+        organization: updatedAppointment.organization,
+        created_for: updatedAppointment.intendedFor,
+        ...NOTIFICATION_CONFIG.COMPLETE_APPOINTMENT_PATIENT,
+      });
+      await SendNotification({
+        organization: updatedAppointment.organization,
+        created_for: updatedAppointment.createdBy,
+        ...NOTIFICATION_CONFIG.COMPLETE_APPOINTMENT_EMPLOYEE,
+      });
+      res.status(200).json({
+        message: "[SUCESSO] : O agendamento foi concluido com sucesso!",
+        appointment: updatedAppointment,
+      });
+    } catch (err) {
+      console.log(err);
+      return errorHelper({ res, ...INTERNAL_ERROR_CONFIG });
     }
   },
 };
