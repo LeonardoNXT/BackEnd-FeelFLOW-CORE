@@ -486,8 +486,10 @@ async function generateAppointmentListPDFBuffer(appointments, config) {
   `;
 
   const browser = await puppeteer.launch({
-    headless: true,
-    args: ["--no-sandbox", "--disable-setuid-sandbox"],
+    args: chromium.args,
+    defaultViewport: chromium.defaultViewport,
+    executablePath: await chromium.executablePath(),
+    headless: chromium.headless,
   });
   const page = await browser.newPage();
   await page.setContent(html, { waitUntil: "networkidle0" });
