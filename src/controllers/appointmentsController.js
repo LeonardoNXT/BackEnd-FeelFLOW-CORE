@@ -10,8 +10,11 @@ const errorHelper = require("./logic/errorHelper");
 const GET_APPOINTMENTS_CONFIG = require("./logic/configGetAppointmentPerRole");
 const GetAppointments = require("./logic/getPerIDAndRole");
 const DefaultSendEmail = require("./logic/emailsend");
-const getPerIDAndRole = require("./logic/getPerIDAndRole");
 const mongoose = require("mongoose");
+const { generateAppointmentReportPDF } = require("./logic/generatePDFperRole");
+const {
+  generateAppointmentPDFBuffer,
+} = require("./logic/generateAppointmentPDF");
 
 const INTERNAL_ERROR_CONFIG = {
   status: 500,
@@ -651,6 +654,270 @@ const appointmentsController = {
     } catch (err) {
       console.log(err);
       return errorHelper({ res, ...INTERNAL_ERROR_CONFIG });
+    }
+  },
+  async getAllCompleteAppointments(req, res) {
+    const userId = req.user.id;
+    const { role } = req.user;
+
+    try {
+      const completeAppointments = await GetAppointments(
+        Appointment,
+        userId,
+        role,
+        GET_APPOINTMENTS_CONFIG,
+        {
+          status: "concluido",
+        },
+        [
+          {
+            path: "intendedFor",
+            select: "name avatar",
+          },
+          {
+            path: "createdBy",
+            select: "name avatar",
+          },
+          {
+            path: "organization",
+            select: "name avatar",
+          },
+        ]
+      );
+
+      const total = completeAppointments.length;
+
+      if (completeAppointments.length === 0) {
+        return res.status(200).json({
+          message: "Não há nenhum agendamento completo disponível",
+        });
+      }
+
+      res.status(200).json({
+        message: "Os agendamentos completos foram listados com sucesso.",
+        appointments: completeAppointments,
+        total,
+      });
+    } catch (err) {
+      console.log(err);
+      errorHelper({ res, ...INTERNAL_ERROR_CONFIG });
+    }
+  },
+  async getAllCanceledCAppointments(req, res) {
+    const userId = req.user.id;
+    const { role } = req.user;
+
+    try {
+      const completeAppointments = await GetAppointments(
+        Appointment,
+        userId,
+        role,
+        GET_APPOINTMENTS_CONFIG,
+        {
+          status: "cancelado",
+        },
+        [
+          {
+            path: "intendedFor",
+            select: "name avatar",
+          },
+          {
+            path: "createdBy",
+            select: "name avatar",
+          },
+          {
+            path: "organization",
+            select: "name avatar",
+          },
+        ]
+      );
+
+      const total = completeAppointments.length;
+
+      if (completeAppointments.length === 0) {
+        return res.status(200).json({
+          message: "Não há nenhum agendamento completo disponível",
+        });
+      }
+
+      res.status(200).json({
+        message: "Os agendamentos completos foram listados com sucesso.",
+        appointments: completeAppointments,
+        total,
+      });
+    } catch (err) {
+      console.log(err);
+      errorHelper({ res, ...INTERNAL_ERROR_CONFIG });
+    }
+  },
+  async getAppointmentPDF(req, res) {
+    const id = req.params.id || req.body.id;
+
+    if (!id) {
+      return errorHelper({ res, ...ID_ERROR_CONFIG });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        error: "ID inválido",
+        message: `O ID "${id}" não é um ObjectId válido. Deve ter 24 caracteres hexadecimais.`,
+        received: id,
+      });
+    }
+
+    try {
+      const pdfBuffer = await generateAppointmentPDFBuffer(id);
+
+      res.set({
+        "Content-Type": "application/pdf",
+        "Content-Disposition": `attachment; filename=agendamento_${id}.pdf`,
+        "Content-Length": pdfBuffer.length,
+      });
+
+      res.send(pdfBuffer);
+    } catch (err) {
+      console.error("Erro ao gerar PDF individual:", err);
+      errorHelper({ res, ...INTERNAL_ERROR_CONFIG });
+    }
+  },
+  async getAllCanceledAppointmentPDF(req, res) {
+    const userId = req.user.id;
+    try {
+      const result = await generateAppointmentReportPDF({
+        professionalId: userId,
+        status: "cancelado",
+        populateFields: [
+          { path: "intendedFor", select: "name email" },
+          { path: "organization", select: "name" },
+        ],
+      });
+
+      console.log(`PDF gerado: ${result.count} agendamentos cancelados`);
+
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename=agendamentos_cancelados_${Date.now()}.pdf`
+      );
+      res.send(result.buffer);
+    } catch (err) {
+      console.error(err);
+      errorHelper({ res, ...INTERNAL_ERROR_CONFIG });
+    }
+  },
+  async getAllPastConfirmAppointmentPDF(req, res) {
+    const userId = req.user.id;
+    try {
+      const result = await generateAppointmentReportPDF({
+        professionalId: userId,
+        status: "agendado",
+        populateFields: [
+          { path: "intendedFor", select: "name email" },
+          { path: "organization", select: "name" },
+        ],
+        additionalFilters: {
+          startTime: {
+            $lte: new Date(),
+          },
+        },
+      });
+
+      console.log(`PDF gerado: ${result.count} agendamentos cancelados`);
+
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename=agendamentos_confirmados_${Date.now()}.pdf`
+      );
+      res.send(result.buffer);
+    } catch (err) {
+      console.error(err);
+      errorHelper({ res, ...INTERNAL_ERROR_CONFIG });
+    }
+  },
+  async getAllConfirmAppointmentPDF(req, res) {
+    const userId = req.user.id;
+    try {
+      const result = await generateAppointmentReportPDF({
+        professionalId: userId,
+        status: "agendado",
+        populateFields: [
+          { path: "intendedFor", select: "name email" },
+          { path: "organization", select: "name" },
+        ],
+        additionalFilters: {
+          startTime: {
+            $gte: new Date(),
+          },
+        },
+      });
+
+      console.log(`PDF gerado: ${result.count} agendamentos cancelados`);
+
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename=agendamentos_confirmados_${Date.now()}.pdf`
+      );
+      res.send(result.buffer);
+    } catch (err) {
+      console.error(err);
+      errorHelper({ res, ...INTERNAL_ERROR_CONFIG });
+    }
+  },
+  async getAllPendingAppointmentPDF(req, res) {
+    const userId = req.user.id;
+    try {
+      const result = await generateAppointmentReportPDF({
+        professionalId: userId,
+        status: "disponivel",
+        populateFields: [
+          { path: "intendedFor", select: "name email" },
+          { path: "organization", select: "name" },
+        ],
+        additionalFilters: {
+          startTime: {
+            $gte: new Date(),
+          },
+        },
+      });
+
+      console.log(`PDF gerado: ${result.count} agendamentos cancelados`);
+
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename=agendamentos_pendenetes_${Date.now()}.pdf`
+      );
+      res.send(result.buffer);
+    } catch (err) {
+      console.error(err);
+      errorHelper({ res, ...INTERNAL_ERROR_CONFIG });
+    }
+  },
+  async getAllCompleteAppointmentPDF(req, res) {
+    const userId = req.user.id;
+    try {
+      const result = await generateAppointmentReportPDF({
+        professionalId: userId,
+        status: "concluido",
+        populateFields: [
+          { path: "intendedFor", select: "name email" },
+          { path: "organization", select: "name" },
+        ],
+      });
+
+      console.log(`PDF gerado: ${result.count} agendamentos cancelados`);
+
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename=agendamentos_concluidos_${Date.now()}.pdf`
+      );
+      res.send(result.buffer);
+    } catch (err) {
+      console.error(err);
+      errorHelper({ res, ...INTERNAL_ERROR_CONFIG });
     }
   },
 };

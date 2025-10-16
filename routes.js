@@ -37,6 +37,54 @@ route.post(
 
 // ---- Agendamento ---- ///
 
+// Cria Pdf com todos os agendamentos concluidos
+route.post(
+  "/appointments/pdf/complete",
+  checkToken,
+  authorize("employee"),
+  appointmentsController.getAllCompleteAppointmentPDF
+);
+
+// Cria Pdf com todos os agendamentos confirmados passados
+route.post(
+  "/appointments/pdf/past/confirm",
+  checkToken,
+  authorize("employee"),
+  appointmentsController.getAllPastConfirmAppointmentPDF
+);
+
+// Cria Pdf com todos os agendamentos confirmados no futuro
+route.post(
+  "/appointments/pdf/confirm",
+  checkToken,
+  authorize("employee"),
+  appointmentsController.getAllConfirmAppointmentPDF
+);
+
+// Cria Pdf com todos os agendamentos disponíveis no futuro
+route.post(
+  "/appointments/pdf/pending",
+  checkToken,
+  authorize("employee"),
+  appointmentsController.getAllPendingAppointmentPDF
+);
+
+// Cria Pdf com todos os agendamentos cancelados
+route.post(
+  "/appointments/pdf/canceled",
+  checkToken,
+  authorize("employee"),
+  appointmentsController.getAllCanceledAppointmentPDF
+);
+
+// ⚠️ ROTA COM PARÂMETRO DINÂMICO POR ÚLTIMO
+route.post(
+  "/appointments/pdf/:id",
+  checkToken,
+  authorize("employee"),
+  appointmentsController.getAppointmentPDF
+);
+
 // cria novos agendamentos
 route.post(
   "/appointments/availability/create",
@@ -69,6 +117,15 @@ route.post(
   checkToken,
   authorize("employee", "patient"),
   appointmentsController.getAllConfirmAppointments
+);
+
+// pega todos os agendamenos cancelados
+
+route.post(
+  "/appointments/all/canceled",
+  checkToken,
+  authorize("employee", "patient"),
+  appointmentsController.getAllCanceledCAppointments
 );
 
 // pega todos os agendamentos confirmados no passado sem alteração de status.
@@ -131,6 +188,15 @@ route.patch(
   checkToken,
   authorize("employee"),
   appointmentsController.completeAppointment
+);
+
+// GET todos os agendamentos concluidos
+
+route.post(
+  "/appointments/complete/all",
+  checkToken,
+  authorize("adm", "employee", "patient"),
+  appointmentsController.getAllCompleteAppointments
 );
 
 // ---- TAREFAS ---- //
