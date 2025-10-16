@@ -1,4 +1,5 @@
-const puppeteer = require("puppeteer");
+const chromium = require("@sparticuz/chromium");
+const puppeteerCore = require("puppeteer-core");
 const Appointment = require("../../models/Appointments");
 
 async function generateAppointmentPDFBuffer(appointmentId) {
@@ -370,22 +371,49 @@ async function generateAppointmentPDFBuffer(appointmentId) {
     </html>
   `;
 
-  const browser = await puppeteer.launch({
-    args: chromium.args,
-    defaultViewport: chromium.defaultViewport,
-    executablePath: await chromium.executablePath(),
-    headless: chromium.headless,
-  });
-  const page = await browser.newPage();
-  await page.setContent(html, { waitUntil: "networkidle0" });
-  const pdfBuffer = await page.pdf({
-    format: "A4",
-    printBackground: true,
-    margin: { top: "20px", right: "20px", bottom: "20px", left: "20px" },
-  });
-  await browser.close();
+  // Detecta se está em ambiente de produção (Lambda)
+  const isProduction =
+    process.env.AWS_LAMBDA_FUNCTION_NAME ||
+    process.env.NODE_ENV === "production";
 
-  return pdfBuffer;
+  let browser;
+
+  if (isProduction) {
+    // PRODUÇÃO (AWS Lambda): usa puppeteer-core + chromium
+    browser = await puppeteerCore.launch({
+      args: [...chromium.args, "--no-sandbox", "--disable-setuid-sandbox"],
+      defaultViewport: chromium.defaultViewport,
+      executablePath: await chromium.executablePath(),
+      headless: chromium.headless,
+    });
+  } else {
+    // LOCAL: usa puppeteer (vem com Chrome incluso)
+    try {
+      const puppeteer = require("puppeteer");
+      browser = await puppeteer.launch({
+        headless: true,
+        args: ["--no-sandbox", "--disable-setuid-sandbox"],
+      });
+    } catch (error) {
+      throw new Error(
+        "Puppeteer não está instalado. Execute: npm install puppeteer"
+      );
+    }
+  }
+
+  try {
+    const page = await browser.newPage();
+    await page.setContent(html, { waitUntil: "networkidle0" });
+    const pdfBuffer = await page.pdf({
+      format: "A4",
+      printBackground: true,
+      margin: { top: "20px", right: "20px", bottom: "20px", left: "20px" },
+    });
+
+    return pdfBuffer;
+  } finally {
+    await browser.close();
+  }
 }
 
 module.exports = { generateAppointmentPDFBuffer };
