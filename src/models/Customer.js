@@ -29,7 +29,14 @@ const customerSchema = new mongoose.Schema(
         required: false,
       },
     },
-
+    anamnese_pdf: {
+      type: {
+        archive_type: String,
+        url: String,
+        public_id: String,
+      },
+      required: false,
+    },
     // === IDENTIFICAÇÃO COMPLETA DO PACIENTE ===
     birth_date: {
       type: Date,

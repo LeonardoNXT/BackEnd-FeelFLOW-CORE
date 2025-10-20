@@ -6,6 +6,10 @@ const Employee = require("../models/Employee");
 const Organization = require("../models/Organization");
 const SendNotification = require("./logic/sendNotification");
 const NOTIFICATION_CONFIG = require("./logic/notificationConfigCostumer");
+const errorHelper = require("./logic/errorHelper");
+const { uploadPDFToSupabase } = require("../middlewares/supabase");
+const mongoose = require("mongoose");
+const { upload } = require("../middlewares/upload");
 require("../models/Appointments");
 
 // Configuração do Cloudinary
@@ -805,6 +809,101 @@ const customersController = {
     } catch (error) {
       console.error("Erro ao buscar diário de humor:", error);
       res.status(500).json({ error: "Erro ao buscar diário de humor" });
+    }
+  },
+  async createAndUpdateCustomerAnamnese(req, res) {
+    const userId = req.user.id;
+    const patientId = req.body.id;
+
+    if (!mongoose.isValidObjectId(patientId)) {
+      return errorHelper({
+        res,
+        status: 401,
+        error: "O Idendificador(ID) não é válido.",
+        message: "Tente novamente com um identificador válido.",
+      });
+    }
+
+    if (!req.file) {
+      return errorHelper({
+        res,
+        status: 404,
+        error: "O arquivo PDF não foi posto corretamente.",
+        message: "Insira o arquivo PDF corretamente na requisição.",
+      });
+    }
+
+    if (req.file.mimetype !== "application/pdf") {
+      return errorHelper({
+        res,
+        status: 401,
+        error: "O arquivo não é valido.",
+        message: "Insira um arquivo do tipo PDF para continuar.",
+      });
+    }
+
+    try {
+      const patient = await Customer.findOne({
+        _id: patientId,
+        patient_of: userId,
+      });
+
+      if (!patient) {
+        return errorHelper({
+          res,
+          status: 404,
+          error: "Usuário não foi encontrado",
+          message: "Tente novamente com outro Identificador.",
+        });
+      }
+
+      let uploadPdf = null;
+
+      if (patient.anamnese_pdf) {
+        uploadPdf = await uploadPDFToSupabase(
+          req.file,
+          patient.anamnese_pdf.public_id
+        );
+      } else {
+        uploadPdf = await uploadPDFToSupabase(req.file);
+      }
+
+      if (!uploadPdf) {
+        return errorHelper({
+          res,
+          status: 500,
+          error: "Houve algum erro ao fazer o upload para o banco de dados.",
+          message: "Tente novamente mais tarde.",
+        });
+      }
+
+      const anamneseContent = {
+        archive_type: uploadPdf.format,
+        public_id: uploadPdf.public_id,
+        url: uploadPdf.url,
+      };
+
+      const updatedAnamnese = await Customer.findByIdAndUpdate(
+        patientId,
+        {
+          anamnese_pdf: anamneseContent,
+        },
+        { new: true }
+      );
+
+      res.status(200).json({
+        message: "[SUCESSO] : Ficha atualizada com sucesso.",
+        pdf_url: uploadPdf.url,
+        data: updatedAnamnese,
+      });
+    } catch (err) {
+      console.log("[ERRO] : HOUVE UM ERRO INTERNO", err);
+      errorHelper({
+        res,
+        status: 500,
+        error: "Houve um erro interno.",
+        message: "Tente novamente mais tarde.",
+      });
     }
   },
 };

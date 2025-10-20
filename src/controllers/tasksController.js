@@ -3,6 +3,8 @@ const ErrorHelper = require("./logic/errorHelper");
 const Employee = require("../models/Employee");
 const uploadToCloudinary = require("../middlewares/uploadVideosAndImages");
 const { uploadPDFToSupabase } = require("../middlewares/supabase");
+const errorHelper = require("./logic/errorHelper");
+const mongoose = require("mongoose");
 
 const ERROR_CONFIG = {
   INTERNAL: {
@@ -26,6 +28,11 @@ const ERROR_CONFIG = {
     error: "O paciente não pertence a este funcionário",
     message:
       "Para alterar/adicionar novas funcionalidades ao usuário, é necessário que ele esteja vinculado ao funcionário logado.",
+  },
+  NOT_FOUND_ANY_TASKS: {
+    status: 404,
+    error: "Não foi encontrado nenhuma tarefa.",
+    message: "Tente novamente com uma tarefa valida.",
   },
   DATE: {
     status: 403,
@@ -389,12 +396,95 @@ const tasksController = {
       const total = pendingTasks ? pendingTasks.length : 0;
       return res.status(200).json({
         message: "Os agendamentos pendentes foram listados com sucesso.",
-        pendingTasks,
+        data: pendingTasks,
         total: total,
       });
     } catch (err) {
       console.log(err);
       ErrorHelper({ res, ...ERROR_CONFIG.INTERNAL });
+    }
+  },
+  async getALLCompleteTasks(req, res) {
+    const userId = req.user.id;
+    const role = req.user.role;
+
+    try {
+      let tasks = null;
+      if (role === "employee") {
+        tasks = await Tasks.find({
+          createdBy: userId,
+          status: "complete",
+        })
+          .populate("intendedFor", "name avatar")
+          .sort({ updatedAt: -1 });
+      }
+      if (role === "patient") {
+        tasks = await Tasks.find({
+          status: "complete",
+          intendedFor: userId,
+        })
+          .populate("createdBy", "name avatar")
+          .sort({ updatedAt: -1 });
+      }
+      if (tasks.length === 0) {
+        return res.status(200).json({
+          message: "Não foi encontrado nenhuma tarefa concluída.",
+        });
+      }
+      res.status(200).json({
+        message: "As tarefas concluídas foram listadas com sucesso.",
+        data: tasks,
+      });
+    } catch (err) {
+      console.log("[ERRO AO OBTER TAREFAS CONCLUÍDAS]", err);
+      errorHelper({ res, ...ERROR_CONFIG.INTERNAL });
+    }
+  },
+  async getCompleteTasksPerId(req, res) {
+    const userId = req.user.id;
+    const role = req.user.role;
+    const { id } = req.params || req.body;
+
+    if (!id) {
+      return errorHelper({ res, ...ERROR_CONFIG.MISSING_BODY });
+    }
+    if (!mongoose.isValidObjectId(id)) {
+      return errorHelper({
+        res,
+        status: 404,
+        error: "O id não é válido.",
+        message: "Digite um um Id válido para continuar.",
+      });
+    }
+
+    try {
+      let tasks = null;
+      if (role === "employee") {
+        tasks = await Tasks.findOne({
+          _id: id,
+          createdBy: userId,
+        })
+          .populate("intendedFor", "name avatar")
+          .sort({ completionDate: -1 });
+      }
+      if (role === "patient") {
+        tasks = await Tasks.find({
+          _id: id,
+          intendedFor: userId,
+        })
+          .populate("createdBy", "name avatar")
+          .sort({ completionDate: -1 });
+      }
+      if (!tasks) {
+        return errorHelper({ res, ...ERROR_CONFIG.NOT_FOUND_ANY_TASKS });
+      }
+      res.status(200).json({
+        message: "As tarefas concluídas foram listadas com sucesso.",
+        data: tasks,
+      });
+    } catch (err) {
+      console.log("[ERRO AO OBTER TAREFAS CONCLUÍDAS]", err);
+      errorHelper({ res, ...ERROR_CONFIG.INTERNAL });
     }
   },
 };

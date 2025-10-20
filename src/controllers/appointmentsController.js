@@ -104,6 +104,23 @@ const appointmentsController = {
       const start = new Date(startTime);
       const end = new Date(start.getTime() + duration * 60000);
 
+      if (start.getHours() >= 22 || end.getHours() >= 22) {
+        return errorHelper({
+          res,
+          ...VALIDATE_ERROR_CONFIG,
+          message:
+            "O horário de início ou de término não pode ultrapassar 22 horas.",
+        });
+      }
+      if (start.getHours() < 6 || end.getHours() < 6) {
+        return errorHelper({
+          res,
+          ...VALIDATE_ERROR_CONFIG,
+          message:
+            "O horário de começo ou de término não pode ser inferior a 6 horas.",
+        });
+      }
+
       // Verifica se já existe conflito de horário
       const conflict = await Appointment.findOne({
         createdBy: userId,

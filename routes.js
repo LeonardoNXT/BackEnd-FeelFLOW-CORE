@@ -8,6 +8,7 @@ const employeesController = require("./src/controllers/employeesController");
 const customersController = require("./src/controllers/customersController");
 const appointmentsController = require("./src/controllers/appointmentsController");
 const tasksController = require("./src/controllers/tasksController");
+const summariesController = require("./src/controllers/summaryController");
 const {
   upload,
   handleMulterError,
@@ -232,6 +233,62 @@ route.post(
   tasksController.createPatientResponse
 );
 
+// Obtém todas as tarfefas completas.
+
+route.post(
+  "/tasks/completed",
+  checkToken,
+  authorize("employee", "patient"),
+  tasksController.getALLCompleteTasks
+);
+
+// ObtéM a tarefa pelo id,
+
+route.post(
+  "/tasks/get/:id",
+  checkToken,
+  authorize("employee", "patient"),
+  tasksController.getCompleteTasksPerId
+);
+
+// ------ RESUMOS ----- //
+
+// criar resumos
+
+route.post(
+  "/summaries/create",
+  checkToken,
+  authorize("employee"),
+  summariesController.createSummary
+);
+
+// Obtém todos os resumos.
+
+route.post(
+  "/summaries/get/all",
+  checkToken,
+  authorize("employee"),
+  summariesController.getAllSummaries
+);
+
+// Obtém o resumo do id
+
+route.post(
+  "/summaries/get/:id",
+  checkToken,
+  authorize("employee"),
+  summariesController.getSummaryPerId
+);
+
+// Obtém O resumo de determinado paciente
+
+route.post(
+  "/summaries/get/patient/:id",
+  checkToken,
+  authorize("employee"),
+  summariesController.getSummariesPerPatient
+);
+
 // para verificar se está logado FUNCIONARIO/ADM/CLIENTE
 route.post("/auth/verify", checkToken, userController.meUser);
 
@@ -381,6 +438,15 @@ route.post(
   checkToken,
   authorize("adm", "employee", "patient"),
   customersController.getMoodDiary
+);
+
+route.post(
+  "/customers/anamnese/add",
+  checkToken,
+  authorize("employee"),
+  uploadTask.single("anamnese"),
+  handleMulterError,
+  customersController.createAndUpdateCustomerAnamnese
 );
 
 // ---- ADM FUNCOES ---- //

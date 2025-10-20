@@ -6,15 +6,12 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_KEY
 );
 
-const uploadPDFToSupabase = async (file) => {
-  const timestamp = Date.now();
-  const randomStr = Math.random().toString(36).substring(2, 9);
-  const fileName = `${timestamp}_${randomStr}.pdf`;
+const uploadPDFToSupabase = async (file, existingFileName = null) => {
+  const fileName =
+    existingFileName ||
+    `${Date.now()}_${Math.random().toString(36).substring(2, 9)}.pdf`;
 
-  console.log(`[SUPABASE] Iniciando upload de PDF:`, {
-    arquivo: file.originalname,
-    tamanho: (file.size / (1024 * 1024)).toFixed(2) + "MB",
-  });
+  console.log(`[SUPABASE] Iniciando upload de PDF: ${fileName}`);
 
   const uploadStart = Date.now();
 
@@ -24,13 +21,10 @@ const uploadPDFToSupabase = async (file) => {
       .upload(fileName, file.buffer, {
         contentType: "application/pdf",
         cacheControl: "3600",
-        upsert: false,
+        upsert: !!existingFileName, // sobrescreve se houver nome antigo
       });
 
-    if (error) {
-      console.error("[SUPABASE] Erro:", error);
-      throw error;
-    }
+    if (error) throw error;
 
     const uploadTime = ((Date.now() - uploadStart) / 1000).toFixed(2);
     console.log(`[SUPABASE] PDF enviado em ${uploadTime}s`);
@@ -38,8 +32,6 @@ const uploadPDFToSupabase = async (file) => {
     const {
       data: { publicUrl },
     } = supabase.storage.from("documents").getPublicUrl(fileName);
-
-    console.log(`[SUPABASE] URL: ${publicUrl}`);
 
     return {
       resource_type: "raw",

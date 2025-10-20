@@ -28,7 +28,11 @@ const uploadTask = multer({
     fileSize: 50 * MB,
   },
   fileFilter: (req, file, cb) => {
-    if (allowedMimes.some((type) => file.mimetype.startsWith(type))) {
+    if (
+      file.mimetype.startsWith("image/") ||
+      file.mimetype.startsWith("video/") ||
+      file.mimetype === "application/pdf"
+    ) {
       cb(null, true);
     } else {
       cb(
