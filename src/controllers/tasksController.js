@@ -12,6 +12,16 @@ const ERROR_CONFIG = {
     error: "Erro interno",
     message: "Tente Novamente mais tarde.",
   },
+  NOT_FOUND_ID: {
+    status: 404,
+    error: "Não foi encontrado nenhum Identificador(ID)",
+    message: "Coloque corretamente um novo identificador para continuar.",
+  },
+  INVALID_ID: {
+    status: 403,
+    error: "O identificador(ID) não é válido.",
+    message: "Utilize um identificador válido para continuar.",
+  },
   MISSING_BODY: {
     status: 404,
     error: "Os campos obrigatórios não foram preenchidos corretamente.",
@@ -148,7 +158,8 @@ const tasksController = {
               });
 
             return res.status(201).json({
-              message: "Tarefa criada! O vídeo estará disponível em instantes.",
+              message:
+                "Tarefa criada! O vídeo estará dispoFGnível em instantes.",
               taskCreated,
               videoProcessing: true,
             });
@@ -210,6 +221,16 @@ const tasksController = {
     // Validação dos campos obrigatórios
     if (!taskId || !title || !description) {
       return ErrorHelper({ res, ...ERROR_CONFIG.MISSING_BODY });
+    }
+    if (title.length < 10 || description.length < 20) {
+      return errorHelper({
+        res,
+        status: 401,
+        error:
+          "Os elementos não satisfazem a quantidade de caracter requerida.",
+        message:
+          "Insira a quantidade de caractéres necessária para formular a tarefa.",
+      });
     }
 
     try {
@@ -484,6 +505,52 @@ const tasksController = {
       });
     } catch (err) {
       console.log("[ERRO AO OBTER TAREFAS CONCLUÍDAS]", err);
+      errorHelper({ res, ...ERROR_CONFIG.INTERNAL });
+    }
+  },
+  async getTasksPerUser(req, res) {
+    const userId = req.user.id;
+    const { role } = req.user;
+    const patientId = req.params.id || req.body.id;
+    const { status } = req.query;
+
+    if (!patientId) {
+      return errorHelper({ res, ...ERROR_CONFIG.NOT_FOUND_ID });
+    }
+
+    if (!mongoose.isValidObjectId(patientId)) {
+      return errorHelper({ res, ...ERROR_CONFIG.INVALID_ID });
+    }
+
+    const allowedStatus = ["pending", "complete"];
+    if (status && !allowedStatus.includes(status)) {
+      return errorHelper({ res, status: 400, error: "Status inválido." });
+    }
+
+    try {
+      const filter = { intendedFor: patientId };
+
+      if (role === "employee") {
+        filter.createdBy = userId;
+      }
+
+      if (status) {
+        filter.status = status;
+      }
+
+      const tasks = await Tasks.find(filter).lean().sort({ updatedAt: -1 });
+      if (!tasks.length) {
+        return res.status(200).json({
+          message: "Nenhuma tarefa foi encontrada.",
+        });
+      }
+
+      return res.status(200).json({
+        message: "[=== SUCESSO ===] : Tarefas Listadas com sucesso",
+        data: tasks,
+      });
+    } catch (err) {
+      console.error("[=== ERRO ===] Ao obter as tarefas do paciente.", err);
       errorHelper({ res, ...ERROR_CONFIG.INTERNAL });
     }
   },

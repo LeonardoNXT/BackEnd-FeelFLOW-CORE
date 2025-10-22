@@ -251,6 +251,15 @@ route.post(
   tasksController.getCompleteTasksPerId
 );
 
+//
+
+route.post(
+  "/tasks/get/user/:id",
+  checkToken,
+  authorize("employee", "patient"),
+  tasksController.getTasksPerUser
+);
+
 // ------ RESUMOS ----- //
 
 // criar resumos
