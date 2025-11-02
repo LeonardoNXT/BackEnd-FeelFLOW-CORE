@@ -56,6 +56,10 @@ const appointmentsController = {
         appointments = await Appointment.find({ createdBy: userId })
           .populate("intendedFor", "name avatar") // opcional: mostrar pra quem é
           .sort({ createdAt: -1 });
+      } else if (role === "adm") {
+        appointments = await Appointment.find({ organization: userId })
+          .populate("intendedFor", "name avatar") // opcional: mostrar pra quem é
+          .sort({ createdAt: -1 });
       } else {
         return errorHelper({
           res,

@@ -10,6 +10,8 @@ const errorHelper = require("./logic/errorHelper");
 const { uploadPDFToSupabase } = require("../middlewares/supabase");
 const mongoose = require("mongoose");
 const { upload } = require("../middlewares/upload");
+const { generatePatientReportPDF } = require("./logic/patientPdfGenerate");
+const sendNotification = require("./logic/sendNotification");
 require("../models/Appointments");
 
 // Configuração do Cloudinary
@@ -48,18 +50,154 @@ const customersController = {
   // Criar novo cliente/paciente
   async createCustomer(req, res) {
     try {
-      const { organization } = req.user;
-      const { name, email, password, birth_date, patient_of } = req.body;
+      const {
+        name,
+        email,
+        password,
+        birth_date,
+        patient_of: bodyPatientOf,
+        organization: bodyOrganization,
+      } = req.body;
 
       console.log("📥 Dados recebidos:", {
         name,
         email,
         birth_date,
-        patient_of,
+        bodyPatientOf,
+        bodyOrganization,
       });
 
-      // Validações básicas obrigatórias
-      if (!name || !email || !password || !birth_date || !patient_of) {
+      // ========== RECONHECIMENTO DE TOKEN INTERNO ==========
+      let userRole = null;
+      let organizationId = null;
+      let authenticatedUserId = null;
+      let patientOf = null;
+
+      const token =
+        req.cookies?.token ||
+        req.body.token ||
+        req.headers.authorization?.replace("Bearer ", "");
+
+      if (token) {
+        try {
+          const secret = process.env.SECRET;
+          if (!secret) {
+            throw new Error("Chave secreta JWT não configurada");
+          }
+
+          const decoded = jwt.verify(token, secret);
+          authenticatedUserId = decoded.id;
+
+          // Verificar se é ADM (Organization)
+          const orgUser = await Organization.findById(decoded.id);
+          if (orgUser) {
+            userRole = "adm";
+            organizationId = orgUser._id;
+            // ADM precisa informar patient_of no body
+            patientOf = bodyPatientOf;
+          } else {
+            // Verificar se é Employee (Psicólogo)
+            const empUser = await Employee.findById(decoded.id);
+            if (empUser) {
+              userRole = "employee";
+              organizationId = empUser.employee_of; // Pega organization do employee
+              patientOf = empUser._id; // O próprio employee é o patient_of
+
+              // Validar se o employee está ativo
+              if (empUser.status === "Inativo") {
+                return res.status(403).json({
+                  error: "Funcionário inativo",
+                  message:
+                    "Funcionários inativos não podem cadastrar pacientes",
+                });
+              }
+            } else {
+              // Verificar se é Patient - NÃO PODE CADASTRAR
+              const patientUser = await Customer.findById(decoded.id);
+              if (patientUser) {
+                return res.status(403).json({
+                  error: "Acesso negado",
+                  message: "Pacientes não podem cadastrar outros pacientes",
+                });
+              }
+            }
+          }
+
+          console.log("🔐 Token reconhecido:", {
+            userRole,
+            organizationId,
+            patientOf,
+          });
+        } catch (tokenError) {
+          console.log("⚠️ Token inválido ou expirado:", tokenError.message);
+          // Token inválido, continua como deslogado
+          userRole = null;
+        }
+      }
+
+      // ========== DEFINIR ORGANIZAÇÃO E PATIENT_OF (DESLOGADO) ==========
+      if (!userRole) {
+        // Usuário deslogado - precisa informar organization e patient_of no body
+        if (!bodyOrganization) {
+          return res.status(400).json({
+            error: "Organização não especificada",
+            message: "Selecione uma organização para realizar o cadastro",
+          });
+        }
+
+        if (!bodyPatientOf) {
+          return res.status(400).json({
+            error: "Profissional não especificado",
+            message: "Selecione um profissional para realizar o cadastro",
+          });
+        }
+
+        organizationId = bodyOrganization;
+        patientOf = bodyPatientOf;
+      }
+
+      // ========== VALIDAR PATIENT_OF ==========
+      if (!patientOf) {
+        return res.status(400).json({
+          error: "Profissional não especificado",
+          message:
+            "É necessário informar o profissional responsável pelo paciente",
+        });
+      }
+
+      // Validar se o employee existe e está ativo
+      const employee = await Employee.findById(patientOf);
+      if (!employee) {
+        return res.status(404).json({
+          error: "Profissional não encontrado",
+        });
+      }
+
+      if (employee.status === "Inativo") {
+        return res.status(403).json({
+          error: "Profissional inativo",
+          message:
+            "Não é possível cadastrar pacientes para profissionais inativos",
+        });
+      }
+
+      // Validar se a organização existe
+      const orgExists = await Organization.findById(organizationId);
+      if (!orgExists) {
+        return res.status(404).json({
+          error: "Organização não encontrada",
+        });
+      }
+
+      // Validar se o employee pertence à organização
+      if (employee.employee_of.toString() !== organizationId.toString()) {
+        return res.status(400).json({
+          error: "Profissional não pertence à organização informada",
+        });
+      }
+
+      // ========== VALIDAÇÕES BÁSICAS OBRIGATÓRIAS ==========
+      if (!name || !email || !password || !birth_date) {
         return res.status(400).json({
           error: "Todos os campos obrigatórios devem ser preenchidos",
           missing_fields: {
@@ -67,7 +205,6 @@ const customersController = {
             email: !email,
             password: !password,
             birth_date: !birth_date,
-            patient_of: !patient_of,
           },
         });
       }
@@ -80,17 +217,10 @@ const customersController = {
       }
 
       // Validar formato do email
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/; // regex de email pego no github ---
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(email)) {
         return res.status(400).json({
           error: "Formato de email inválido",
-        });
-      }
-
-      // Verificar se o usuário está autenticado
-      if (!req.user || !req.user.id) {
-        return res.status(401).json({
-          error: "Usuário não autenticado",
         });
       }
 
@@ -109,25 +239,56 @@ const customersController = {
       const saltRounds = parseInt(process.env.BCRYPT_SALT_ROUNDS) || 12;
       const hashedPassword = await bcrypt.hash(password, saltRounds);
 
-      // Preparar dados do cliente
+      // ========== LÓGICA RBAC - DEFINIR STATUS ==========
+      let customerStatus = "Inativo"; // Padrão para employee e deslogados
+
+      if (userRole === "adm") {
+        customerStatus = "Ativo"; // Apenas ADM cria pacientes ativos
+        console.log("✅ ADM criando paciente - Status: Ativo");
+      } else {
+        // Employee ou deslogado = Inativo
+        customerStatus = "Inativo";
+        if (userRole === "employee") {
+          console.log(
+            "⚠️ Employee criando paciente - Status: Inativo (requer aprovação do ADM)"
+          );
+        } else {
+          console.log(
+            "⚠️ Cadastro público sem autenticação - Status: Inativo (requer aprovação do ADM)"
+          );
+        }
+      }
+
+      // ========== PREPARAR DADOS DO CLIENTE ==========
       const customerData = {
         name: name.trim(),
         email: email.toLowerCase().trim(),
         password: hashedPassword,
         birth_date: new Date(birth_date),
-        patient_of,
-        client_of: req.user.id, // Quem está criando o cliente
-        status: "Ativo",
+        patient_of: patientOf,
+        client_of: organizationId,
+        status: customerStatus,
       };
 
-      // Upload do avatar se fornecido
+      // ========== UPLOAD DO AVATAR SE FORNECIDO ==========
       if (req.file) {
         try {
           console.log("📸 Fazendo upload do avatar...");
+
+          // Validar tamanho (4MB)
+          const MAX_SIZE = 4 * 1024 * 1024; // 4MB
+          if (req.file.size > MAX_SIZE) {
+            return res.status(400).json({
+              error: "A imagem é muito grande",
+              message: "O tamanho máximo permitido é 4MB",
+            });
+          }
+
           const uploadResult = await uploadToCloudinary(req.file.buffer, {
             public_id: `customer_${Date.now()}_${Math.random()
               .toString(36)
               .substr(2, 9)}`,
+            resource_type: "image",
           });
 
           customerData.avatar = {
@@ -148,74 +309,122 @@ const customersController = {
         }
       }
 
-      // Criar cliente
+      // ========== CRIAR CLIENTE ==========
       const newCustomer = new Customer(customerData);
       const savedCustomer = await newCustomer.save();
-
-      SendNotification({
-        organization,
-        created_for: savedCustomer.patient_of,
-        ...NOTIFICATION_CONFIG.CREATE_PATIENT_NOTIFICATION_EMPLOYEE,
-      });
-
       console.log("✅ Cliente salvo no banco:", savedCustomer._id);
 
-      // Adicionar cliente à lista de pacientes do funcionário
+      // ========== ADICIONAR CLIENTE ÀS LISTAS ==========
       try {
+        // Adicionar cliente à lista de pacientes do funcionário
         await Employee.findByIdAndUpdate(
-          patient_of, // pega o id do funcionario
+          patientOf,
           {
             $addToSet: { patients: savedCustomer._id },
           },
           { new: true }
         );
 
-        // Adiciona O Paciente ao custumers da organizacao
+        // Adicionar paciente aos customers da organização
         await Organization.findByIdAndUpdate(
-          req.user.id, // id do adm
+          organizationId,
           {
             $addToSet: { customers: savedCustomer._id },
           },
-          {
-            new: true,
-          }
+          { new: true }
         );
 
         console.log(
-          `✅ Cliente ${savedCustomer._id} adicionado ao funcionário ${patient_of}`
+          `✅ Cliente ${savedCustomer._id} adicionado ao funcionário ${patientOf} e organização ${organizationId}`
         );
-      } catch (empUpdateError) {
-        console.error("❌ Erro ao atualizar funcionário:", empUpdateError);
+      } catch (updateError) {
+        console.error("❌ Erro ao atualizar relacionamentos:", updateError);
 
         // Deletar o cliente criado para manter consistência
         await Customer.findByIdAndDelete(savedCustomer._id);
 
+        // Limpar avatar se foi feito upload
+        if (customerData.avatar?.public_id) {
+          try {
+            await cloudinary.uploader.destroy(customerData.avatar.public_id);
+          } catch (cleanupError) {
+            console.error("❌ Erro ao limpar imagem:", cleanupError);
+          }
+        }
+
         return res.status(500).json({
-          error: "Erro ao associar cliente ao funcionário",
-          details: empUpdateError.message,
+          error: "Erro ao associar cliente",
+          details: updateError.message,
         });
       }
 
-      // Remover senha da resposta
+      // ========== ENVIAR NOTIFICAÇÕES ==========
+      // Enviar notificação APENAS após sucesso completo do cadastro
+      try {
+        if (userRole === "employee") {
+          // Notificação para a ORGANIZAÇÃO quando employee cria paciente
+          await SendNotification({
+            organization: organizationId,
+            created_for: organizationId, // Notificação vai para o ADM da organização
+            kind: "Organization", // ✅ CAMPO CORRETO
+            title: "Novo Paciente Cadastrado",
+            summary: `Um novo paciente foi cadastrado pelo psicólogo(a) ${employee.name}. Verifique na área de pacientes.`, // ✅ CAMPO CORRETO
+            notification_type: "Pacientes", // ✅ CAMPO CORRETO
+          });
+
+          console.log(
+            `✅ Notificação enviada para organização ${organizationId} sobre cadastro de paciente pelo employee ${employee._id}`
+          );
+        } else if (userRole === "adm") {
+          // Notificação para o EMPLOYEE quando ADM cria paciente para ele
+          await SendNotification({
+            organization: organizationId,
+            created_for: savedCustomer.patient_of, // Notificação vai para o employee
+            kind: "Employee", // ✅ CAMPO CORRETO
+            title: "Novo Paciente Atribuído",
+            summary: `Um novo paciente foi cadastrado e atribuído a você. Verifique na área de pacientes.`, // ✅ CAMPO CORRETO
+            notification_type: "Pacientes", // ✅ CAMPO CORRETO
+          });
+
+          console.log(
+            `✅ Notificação enviada para employee ${savedCustomer.patient_of} sobre novo paciente atribuído`
+          );
+        }
+      } catch (notificationError) {
+        // Não bloquear o cadastro se a notificação falhar
+        console.error("⚠️ Erro ao enviar notificação:", notificationError);
+      }
+
+      // ========== RESPOSTA ==========
       const customerResponse = savedCustomer.toObject();
       delete customerResponse.password;
 
       console.log("🎉 Cliente criado com sucesso:", {
         id: customerResponse._id,
         name: customerResponse.name,
+        status: customerResponse.status,
+        createdBy: userRole || "público (deslogado)",
       });
 
       res.status(201).json({
         message: "Cliente criado com sucesso",
         customer: customerResponse,
+        info: {
+          status: customerResponse.status,
+          requiresActivation: customerResponse.status === "Inativo",
+          message:
+            customerResponse.status === "Inativo"
+              ? "Cadastro realizado! Aguarde a aprovação do administrador para acessar o sistema."
+              : "Cadastro ativo! Você já pode acessar o sistema.",
+        },
       });
     } catch (error) {
       console.error("❌ Erro ao criar cliente:", error);
 
       // Se houve erro após upload, limpar imagem do Cloudinary
-      if (req.uploadedPublicId) {
+      if (req.file && customerData?.avatar?.public_id) {
         try {
-          await cloudinary.uploader.destroy(req.uploadedPublicId);
+          await cloudinary.uploader.destroy(customerData.avatar.public_id);
         } catch (cleanupError) {
           console.error("❌ Erro ao limpar imagem:", cleanupError);
         }
@@ -544,6 +753,122 @@ const customersController = {
         });
       }
 
+      // ========== VALIDAÇÃO DE EMAIL ==========
+      if (updateData.email && updateData.email !== existingCustomer.email) {
+        // Validar formato de email
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(updateData.email)) {
+          return res.status(400).json({
+            error: "Formato de email inválido",
+          });
+        }
+
+        // Verificar se o email já está em uso por outro cliente
+        const emailExists = await Customer.findOne({
+          email: updateData.email.toLowerCase(),
+          _id: { $ne: id }, // Excluir o próprio cliente da busca
+        });
+
+        if (emailExists) {
+          return res.status(400).json({
+            error: "Este email já está em uso por outro cliente",
+          });
+        }
+
+        // Normalizar email
+        updateData.email = updateData.email.toLowerCase().trim();
+      }
+
+      // ========== VALIDAÇÃO DE TELEFONES ==========
+      if (updateData.contacts) {
+        const { phone, emergency_contact } = updateData.contacts;
+
+        // Função para validar e formatar telefone brasileiro
+        const validatePhone = (phoneNumber) => {
+          if (!phoneNumber) return null;
+
+          // Remove tudo que não é número
+          const cleanPhone = phoneNumber.replace(/\D/g, "");
+
+          // Validar telefone brasileiro
+          // Formatos aceitos:
+          // - Celular: (XX) 9XXXX-XXXX ou XX9XXXXXXXX (11 dígitos)
+          // - Fixo: (XX) XXXX-XXXX ou XXXXXXXXXX (10 dígitos)
+          if (cleanPhone.length === 11) {
+            // Celular com DDD
+            const ddd = cleanPhone.substring(0, 2);
+            const firstDigit = cleanPhone.charAt(2);
+
+            // Validar DDD (11 a 99)
+            if (parseInt(ddd) < 11 || parseInt(ddd) > 99) {
+              return { valid: false, message: "DDD inválido" };
+            }
+
+            // Celular deve começar com 9
+            if (firstDigit !== "9") {
+              return {
+                valid: false,
+                message: "Número de celular deve começar com 9",
+              };
+            }
+
+            return {
+              valid: true,
+              formatted: `(${ddd}) ${cleanPhone.substring(2, 7)}-${cleanPhone.substring(7)}`,
+              clean: cleanPhone,
+            };
+          } else if (cleanPhone.length === 10) {
+            // Telefone fixo com DDD
+            const ddd = cleanPhone.substring(0, 2);
+
+            // Validar DDD
+            if (parseInt(ddd) < 11 || parseInt(ddd) > 99) {
+              return { valid: false, message: "DDD inválido" };
+            }
+
+            return {
+              valid: true,
+              formatted: `(${ddd}) ${cleanPhone.substring(2, 6)}-${cleanPhone.substring(6)}`,
+              clean: cleanPhone,
+            };
+          } else {
+            return {
+              valid: false,
+              message:
+                "Telefone deve ter 10 dígitos (fixo) ou 11 dígitos (celular) incluindo DDD",
+            };
+          }
+        };
+
+        // Validar telefone principal
+        if (phone) {
+          const phoneValidation = validatePhone(phone);
+          if (!phoneValidation.valid) {
+            return res.status(400).json({
+              error: `Telefone inválido: ${phoneValidation.message}`,
+            });
+          }
+          updateData.contacts.phone = phoneValidation.formatted;
+        }
+
+        // Validar telefone de emergência
+        if (emergency_contact) {
+          const emergencyValidation = validatePhone(emergency_contact);
+          if (!emergencyValidation.valid) {
+            return res.status(400).json({
+              error: `Telefone de emergência inválido: ${emergencyValidation.message}`,
+            });
+          }
+          updateData.contacts.emergency_contact = emergencyValidation.formatted;
+        }
+
+        // Manter outros campos de contacts que não foram enviados
+        updateData.contacts = {
+          ...existingCustomer.contacts,
+          ...updateData.contacts,
+        };
+      }
+
       // Se está alterando o funcionário responsável, verificar se é válido
       if (updateData.patient_of) {
         const employee = await Employee.findOne({
@@ -609,6 +934,13 @@ const customersController = {
         return res.status(400).json({
           error: "Dados inválidos",
           details: validationErrors,
+        });
+      }
+
+      if (error.code === 11000) {
+        // Erro de duplicação de chave única (email)
+        return res.status(400).json({
+          error: "Email já está em uso",
         });
       }
 
@@ -902,6 +1234,169 @@ const customersController = {
         res,
         status: 500,
         error: "Houve um erro interno.",
+        message: "Tente novamente mais tarde.",
+      });
+    }
+  },
+  async getCustomersStats(req, res) {
+    try {
+      // Verificar autenticação
+      if (!req.user || !req.user.id) {
+        return res.status(401).json({
+          error: "Usuário não autenticado",
+        });
+      }
+
+      const { role } = req.user;
+      const userId = req.user.id;
+
+      console.log("Buscando estatísticas de clientes para:", userId, role);
+
+      let query = {};
+
+      // Definir query baseado no role
+      if (role === "adm") {
+        query = { client_of: userId };
+      } else if (role === "employee") {
+        query = { patient_of: userId };
+      } else {
+        return res.status(403).json({
+          error: "Sem permissão para acessar estatísticas",
+        });
+      }
+
+      // Buscar todos os clientes
+      const customers = await Customer.find(query)
+        .select("-password")
+        .populate("patient_of", "name email avatar")
+        .sort({ createdAt: -1 });
+
+      // Calcular estatísticas
+      const total = customers.length;
+      const ativos = customers.filter((c) => c.status === "Ativo").length;
+      const inativos = customers.filter((c) => c.status === "Inativo").length;
+
+      // Buscar clientes mais recentes (últimos 5)
+      const recentes = customers.slice(0, 5).map((customer) => ({
+        _id: customer._id,
+        name: customer.name,
+        email: customer.email,
+        avatar: customer.avatar,
+        status: customer.status,
+        patient_of: customer.patient_of,
+        createdAt: customer.createdAt,
+        mood_diary_entries: customer.mood_diary?.length || 0,
+      }));
+
+      // Estatísticas de diário de humor
+      const totalMoodEntries = customers.reduce(
+        (acc, customer) => acc + (customer.mood_diary?.length || 0),
+        0
+      );
+
+      // Clientes com mais entradas no diário
+      const topMoodDiary = customers
+        .filter((c) => c.mood_diary && c.mood_diary.length > 0)
+        .sort((a, b) => b.mood_diary.length - a.mood_diary.length)
+        .slice(0, 3)
+        .map((customer) => ({
+          _id: customer._id,
+          name: customer.name,
+          avatar: customer.avatar,
+          mood_entries: customer.mood_diary.length,
+        }));
+
+      // Estatísticas de cadastros por mês (últimos 6 meses)
+      const sixMonthsAgo = new Date();
+      sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+
+      const customersByMonth = customers
+        .filter((c) => new Date(c.createdAt) >= sixMonthsAgo)
+        .reduce((acc, customer) => {
+          const month = new Date(customer.createdAt).toLocaleDateString(
+            "pt-BR",
+            {
+              month: "short",
+              year: "numeric",
+            }
+          );
+          acc[month] = (acc[month] || 0) + 1;
+          return acc;
+        }, {});
+
+      // Distribuição por profissional (apenas para ADM)
+      let customersByProfessional = [];
+      if (role === "adm") {
+        const distribution = customers.reduce((acc, customer) => {
+          const profId =
+            customer.patient_of?._id?.toString() || "Não atribuído";
+          const profName = customer.patient_of?.name || "Não atribuído";
+
+          if (!acc[profId]) {
+            acc[profId] = {
+              professional_id: profId,
+              professional_name: profName,
+              professional_avatar: customer.patient_of?.avatar,
+              count: 0,
+            };
+          }
+          acc[profId].count++;
+          return acc;
+        }, {});
+
+        customersByProfessional = Object.values(distribution).sort(
+          (a, b) => b.count - a.count
+        );
+      }
+
+      console.log(`Estatísticas calculadas: ${total} clientes encontrados`);
+
+      res.json({
+        total,
+        ativos,
+        inativos,
+        recentes,
+        mood_stats: {
+          total_entries: totalMoodEntries,
+          top_contributors: topMoodDiary,
+        },
+        cadastros_por_mes: customersByMonth,
+        ...(role === "adm" && {
+          distribuicao_por_profissional: customersByProfessional,
+        }),
+        message: "Estatísticas de clientes obtidas com sucesso",
+      });
+    } catch (error) {
+      console.error("Erro ao buscar estatísticas de clientes:", error);
+      res.status(500).json({
+        error: "Erro ao buscar estatísticas",
+        details:
+          process.env.NODE_ENV === "development" ? error.message : undefined,
+      });
+    }
+  },
+  async getAllPatientsPDF(req, res) {
+    const userId = req.user.id;
+    try {
+      const result = await generatePatientReportPDF({
+        professionalId: userId,
+        populateFields: [{ path: "client_of", select: "name" }],
+      });
+
+      console.log(`PDF gerado: ${result.count} pacientes`);
+
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename=pacientes_${Date.now()}.pdf`
+      );
+      res.send(result.buffer);
+    } catch (err) {
+      console.error(err);
+      errorHelper({
+        res,
+        status: 404,
+        error: "Houve um erro interno",
         message: "Tente novamente mais tarde.",
       });
     }

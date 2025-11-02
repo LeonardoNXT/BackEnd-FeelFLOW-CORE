@@ -10,6 +10,14 @@ const appointmentsController = require("./src/controllers/appointmentsController
 const tasksController = require("./src/controllers/tasksController");
 const summariesController = require("./src/controllers/summaryController");
 const {
+  getAccountsMetrics,
+  getMoodMetrics,
+  getAllDashboardMetrics,
+  getPatientsChartData,
+  getEmotionsChartData,
+  getAgeDistribution,
+} = require("./src/controllers/dashboardController");
+const {
   upload,
   handleMulterError,
   uploadTask,
@@ -25,14 +33,14 @@ route.get("/", (req, res) => {
 route.post(
   "/notification/all",
   checkToken,
-  authorize("employee", "patient"),
+  authorize("employee", "patient", "adm"),
   notificationController.getAllNotificationsUser
 );
 
 route.post(
   "/notification/read/:id",
   checkToken,
-  authorize("patient", "employee"),
+  authorize("patient", "employee", "adm"),
   notificationController.readNotification
 );
 
@@ -373,10 +381,16 @@ route.patch(
 // cadastrar novo pacientes
 route.post(
   "/customers",
-  checkToken,
   upload.single("avatar"),
   handleMulterError,
   customersController.createCustomer
+);
+
+route.post(
+  "/customers/pdf",
+  checkToken,
+  authorize("adm", "employee"),
+  customersController.getAllPatientsPDF
 );
 
 // login de pacientes
@@ -389,6 +403,12 @@ route.post(
   checkToken,
   authorize("adm", "employee"),
   customersController.getCustomers
+);
+route.post(
+  "/customers/stats",
+  checkToken,
+  authorize("adm", "employee"),
+  customersController.getCustomersStats
 );
 
 // Buscar cliente por ID
@@ -459,6 +479,38 @@ route.post(
 );
 
 // ---- ADM FUNCOES ---- //
+
+route.post(
+  "/accounts-metrics",
+  checkToken,
+  authorize("adm"),
+  getAccountsMetrics
+);
+route.post("/mood-metrics", checkToken, authorize("adm"), getMoodMetrics);
+route.post(
+  "/all-metrics",
+  checkToken,
+  authorize("adm"),
+  getAllDashboardMetrics
+);
+route.post(
+  "/patients-chart",
+  checkToken,
+  authorize("adm"),
+  getPatientsChartData
+);
+route.post(
+  "/emotions-chart",
+  checkToken,
+  authorize("adm"),
+  getEmotionsChartData
+);
+route.post(
+  "/age-distribution",
+  checkToken,
+  authorize("adm"),
+  getAgeDistribution
+);
 
 // CHAT AI
 route.post("/ai/chat", checkToken, iaController.chatWithAI);

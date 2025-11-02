@@ -59,11 +59,6 @@ const customerSchema = new mongoose.Schema(
       emergency_contact: String,
       emergency_name: String,
     },
-    // Para menores de idade
-    is_minor: {
-      type: Boolean,
-      default: false,
-    },
     parents_or_guardians: {
       father_name: String,
       mother_name: String,
