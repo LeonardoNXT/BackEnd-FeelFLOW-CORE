@@ -15,6 +15,8 @@ const { generateAppointmentReportPDF } = require("./logic/generatePDFperRole");
 const {
   generateAppointmentPDFBuffer,
 } = require("./logic/generateAppointmentPDF");
+const timezoneHelper = require("./logic/timezoneHelper");
+
 
 const INTERNAL_ERROR_CONFIG = {
   status: 500,
@@ -108,22 +110,14 @@ const appointmentsController = {
       const start = new Date(startTime);
       const end = new Date(start.getTime() + duration * 60000);
 
-      if (start.getHours() >= 22 || end.getHours() >= 22) {
-        return errorHelper({
+     const validation = timezoneHelper.validateBusinessHours(start, end);
+        if (!validation.valid) {
+          return errorHelper({
           res,
           ...VALIDATE_ERROR_CONFIG,
-          message:
-            "O horário de início ou de término não pode ultrapassar 22 horas.",
+          message: validation.error,
         });
-      }
-      if (start.getHours() < 6 || end.getHours() < 6) {
-        return errorHelper({
-          res,
-          ...VALIDATE_ERROR_CONFIG,
-          message:
-            "O horário de começo ou de término não pode ser inferior a 6 horas.",
-        });
-      }
+        }
 
       // Verifica se já existe conflito de horário
       const conflict = await Appointment.findOne({
@@ -257,27 +251,16 @@ const appointmentsController = {
       const newStart = new Date(newStartTime);
       const newEnd = new Date(newStart.getTime() + newDuration * 60000);
 
-      console.log("[HORAS]", {
-        comeco: newStart.getHours(),
-        fim: newEnd.getHours(),
-      });
+timezoneHelper.logTimeDebug(newStart, newEnd, 'UPDATE AVAILABILITY');
 
-      if (newStart.getHours() >= 22 || newEnd.getHours() >= 22) {
-        return errorHelper({
-          res,
-          ...VALIDATE_ERROR_CONFIG,
-          message:
-            "O horário de início ou de término não pode ultrapassar 22 horas.",
-        });
-      }
-      if (newStart.getHours() < 6 || newEnd.getHours() < 6) {
-        return errorHelper({
-          res,
-          ...VALIDATE_ERROR_CONFIG,
-          message:
-            "O horário de começo ou de término não pode ser inferior a 6 horas.",
-        });
-      }
+const validation = timezoneHelper.validateBusinessHours(newStart, newEnd);
+if (!validation.valid) {
+  return errorHelper({
+    res,
+    ...VALIDATE_ERROR_CONFIG,
+    message: validation.error,
+  });
+}
 
       // Verifica se há conflito com outros horários do mesmo psicólogo
       const conflict = await Appointment.findOne({
