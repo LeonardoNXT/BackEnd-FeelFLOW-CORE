@@ -1,14 +1,15 @@
 const mongoose = require("mongoose");
+const timezoneHelper = require("../controllers/logic/timezoneHelper");
 
 const appointmentSchema = new mongoose.Schema({
   status: {
     type: String,
     enum: ["disponivel", "agendado", "cancelado", "concluido"],
-    default: "disponivel", // Novo padrão: começa como disponível
+    default: "disponivel",
   },
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "Employee", // Psicólogo
+    ref: "Employee",
     required: true,
   },
   organization: {
@@ -18,8 +19,8 @@ const appointmentSchema = new mongoose.Schema({
   },
   intendedFor: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "Customer", // Paciente
-    default: null, // Será definido apenas quando o paciente escolher o horário
+    ref: "Customer",
+    default: null,
   },
   createdAt: {
     type: Date,
@@ -28,17 +29,14 @@ const appointmentSchema = new mongoose.Schema({
   acceptedAt: {
     type: Date,
   },
-  // Data e hora de início do agendamento
   startTime: {
     type: Date,
     required: true,
   },
-  // Duração em minutos
   duration: {
     type: Number,
     required: true,
   },
-  // Tempo final calculado automaticamente
   endTime: {
     type: Date,
   },
@@ -56,20 +54,15 @@ appointmentSchema.pre("save", async function (next) {
   // 🔹 Calcula o horário de término
   this.endTime = new Date(this.startTime.getTime() + this.duration * 60000);
 
-  // 🔹 Verifica se o horário ultrapassa 22h
-  const startHour = this.startTime.getHours();
-  const endHour = this.endTime.getHours();
-
-  // Se o início OU o fim for >= 22h (10 da noite), bloqueia
-  if (startHour >= 22 || endHour >= 22) {
-    const err = new Error("Horários após as 22:00 não são permitidos.");
-    return next(err);
+  // 🔹 Valida horário de funcionamento usando fuso horário brasileiro
+  const validation = timezoneHelper.validateBusinessHours(this.startTime, this.endTime);
+  
+  if (!validation.valid) {
+    return next(new Error(validation.error));
   }
 
-  if (startHour < 6) {
-    const err = new Error("Horários antes das 06:00 não são permitidos.");
-    return next(err);
-  }
+  // 🔹 Log para debug (pode remover depois)
+  timezoneHelper.logTimeDebug(this.startTime, this.endTime, 'APPOINTMENT PRE-SAVE');
 
   // 🔹 Verifica conflito de horários
   const overlap = await mongoose.model("Appointment").findOne({
@@ -90,5 +83,4 @@ appointmentSchema.pre("save", async function (next) {
 });
 
 const Appointment = mongoose.model("Appointment", appointmentSchema);
-
 module.exports = Appointment;
