@@ -2,7 +2,6 @@
  * Helper para lidar com fuso horário brasileiro (America/Sao_Paulo)
  * Evita problemas ao validar horários em UTC
  */
-
 const TIMEZONE = 'America/Sao_Paulo';
 
 /**
@@ -42,20 +41,36 @@ function getLocalTime(date) {
  * @returns {{valid: boolean, error: string|null}} - Resultado da validação
  */
 function validateBusinessHours(startTime, endTime) {
-  const startHour = getLocalHour(startTime);
-  const endHour = getLocalHour(endTime);
+  const startLocal = getLocalTime(startTime);
+  const endLocal = getLocalTime(endTime);
   
-  if (startHour >= 22 || endHour >= 22) {
+  // Converte para minutos totais para comparação precisa
+  const startTotalMinutes = startLocal.hour * 60 + startLocal.minute;
+  const endTotalMinutes = endLocal.hour * 60 + endLocal.minute;
+  
+  // Limite inferior: 6:00 (360 minutos)
+  const MIN_MINUTES = 6 * 60;
+  // Limite superior: 22:00 (1320 minutos)
+  const MAX_MINUTES = 22 * 60;
+  
+  if (startTotalMinutes < MIN_MINUTES) {
     return {
       valid: false,
-      error: "O horário de início ou de término não pode ultrapassar 22 horas."
+      error: "O horário de início não pode ser anterior a 06:00."
     };
   }
   
-  if (startHour < 6 || endHour < 6) {
+  if (endTotalMinutes > MAX_MINUTES) {
     return {
       valid: false,
-      error: "O horário de começo ou de término não pode ser inferior a 6 horas."
+      error: "O horário de término não pode ultrapassar 22:00."
+    };
+  }
+  
+  if (startTotalMinutes >= MAX_MINUTES) {
+    return {
+      valid: false,
+      error: "O horário de início não pode ser às 22:00 ou depois."
     };
   }
   
