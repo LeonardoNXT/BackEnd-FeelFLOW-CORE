@@ -737,20 +737,61 @@ const customersController = {
       // Remover campos que não devem ser atualizados diretamente
       delete updateData.password; // Senha deve ser atualizada via endpoint específico
       delete updateData._id;
-      delete updateData.client_of; // Não permitir alterar o dono do cliente
       delete updateData.appointments; // Appointments são gerenciados separadamente
 
-      // Verificar se o cliente pertence ao usuário
-      const existingCustomer = await Customer.findOne({
-        _id: id,
-        client_of: req.user.id,
-      });
+      let existingCustomer;
 
-      if (!existingCustomer) {
-        return res.status(404).json({
-          error:
-            "Cliente não encontrado ou você não tem permissão para editá-lo",
+      // ========== LÓGICA BASEADA NO ROLE ==========
+      if (req.role === "patient") {
+        // PACIENTE: Só pode atualizar seus próprios dados
+        if (id !== req.user.id) {
+          return res.status(403).json({
+            error: "Você só pode atualizar seus próprios dados",
+          });
+        }
+
+        // Paciente não pode alterar certos campos
+        delete updateData.client_of; // Não pode alterar o dono
+        delete updateData.patient_of; // Não pode alterar o funcionário responsável
+        delete updateData.role; // Não pode alterar a role
+
+        existingCustomer = await Customer.findById(id);
+
+        if (!existingCustomer) {
+          return res.status(404).json({
+            error: "Cliente não encontrado",
+          });
+        }
+      } else {
+        // ADMIN/FUNCIONÁRIO: Pode atualizar clientes da organização
+        delete updateData.client_of; // Não permitir alterar o dono do cliente
+
+        existingCustomer = await Customer.findOne({
+          _id: id,
+          client_of: req.user.id,
         });
+
+        if (!existingCustomer) {
+          return res.status(404).json({
+            error:
+              "Cliente não encontrado ou você não tem permissão para editá-lo",
+          });
+        }
+
+        // Se está alterando o funcionário responsável, verificar se é válido
+        if (updateData.patient_of) {
+          const employee = await Employee.findOne({
+            _id: updateData.patient_of,
+            employee_of: req.user.id,
+          });
+
+          if (!employee) {
+            return res.status(400).json({
+              error:
+                "Funcionário responsável não encontrado ou não pertence à sua organização",
+            });
+          }
+        }
       }
 
       // ========== VALIDAÇÃO DE EMAIL ==========
@@ -867,21 +908,6 @@ const customersController = {
           ...existingCustomer.contacts,
           ...updateData.contacts,
         };
-      }
-
-      // Se está alterando o funcionário responsável, verificar se é válido
-      if (updateData.patient_of) {
-        const employee = await Employee.findOne({
-          _id: updateData.patient_of,
-          employee_of: req.user.id,
-        });
-
-        if (!employee) {
-          return res.status(400).json({
-            error:
-              "Funcionário responsável não encontrado ou não pertence à sua organização",
-          });
-        }
       }
 
       // Se tem nova imagem
