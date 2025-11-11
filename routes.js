@@ -411,6 +411,15 @@ route.post(
   customersController.getCustomersStats
 );
 
+route.put(
+  "/customers/me",
+  checkToken,
+  authorize("patient"), // Somente pacientes
+  upload.single("avatar"),
+  handleMulterError,
+  customersController.updateOwnProfile
+);
+
 // Buscar cliente por ID
 route.post(
   "/customers/:id",
@@ -427,14 +436,6 @@ route.put(
   upload.single("avatar"),
   handleMulterError,
   customersController.updateCustomer
-);
-route.put(
-  "/customers/me",
-  checkToken,
-  authorize("patient"), // Somente pacientes
-  upload.single("avatar"),
-  handleMulterError,
-  customersController.updateOwnProfile
 );
 
 // Deletar cliente
