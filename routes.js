@@ -423,7 +423,7 @@ route.post(
 route.put(
   "/customers/:id",
   checkToken,
-  authorize("adm"), // vai editar cadastro basico - não ficha anamnese.
+  authorize("adm", "patient"), // vai editar cadastro basico - não ficha anamnese.
   upload.single("avatar"),
   handleMulterError,
   customersController.updateCustomer
