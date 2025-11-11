@@ -428,6 +428,14 @@ route.put(
   handleMulterError,
   customersController.updateCustomer
 );
+route.put(
+  "/customers/me",
+  checkToken,
+  authorize("patient"), // Somente pacientes
+  upload.single("avatar"),
+  handleMulterError,
+  customersController.updateOwnProfile
+);
 
 // Deletar cliente
 route.delete(

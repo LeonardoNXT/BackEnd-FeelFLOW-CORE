@@ -973,6 +973,204 @@ const customersController = {
       res.status(500).json({ error: "Erro ao atualizar cliente" });
     }
   },
+  async updateOwnProfile(req, res) {
+    try {
+      const id = req.user.id; // ID vem do token JWT
+      const updateData = { ...req.body };
+
+      // Verificar se o usuário está autenticado
+      if (!req.user || !req.user.id) {
+        return res.status(401).json({
+          error: "Usuário não autenticado",
+        });
+      }
+
+      // Remover campos que o PACIENTE não pode alterar
+      delete updateData.password; // Senha deve ser via endpoint específico
+      delete updateData._id;
+      delete updateData.appointments; // Gerenciados separadamente
+      delete updateData.client_of; // Não pode alterar o dono
+      delete updateData.patient_of; // Não pode alterar funcionário responsável
+      delete updateData.role; // Não pode alterar a role
+
+      // Buscar cliente existente
+      const existingCustomer = await Customer.findById(id);
+
+      if (!existingCustomer) {
+        return res.status(404).json({
+          error: "Cliente não encontrado",
+        });
+      }
+
+      // ========== VALIDAÇÃO DE EMAIL ==========
+      if (updateData.email && updateData.email !== existingCustomer.email) {
+        // Validar formato de email
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(updateData.email)) {
+          return res.status(400).json({
+            error: "Formato de email inválido",
+          });
+        }
+
+        // Verificar se o email já está em uso
+        const emailExists = await Customer.findOne({
+          email: updateData.email.toLowerCase(),
+          _id: { $ne: id },
+        });
+
+        if (emailExists) {
+          return res.status(400).json({
+            error: "Este email já está em uso por outro cliente",
+          });
+        }
+
+        // Normalizar email
+        updateData.email = updateData.email.toLowerCase().trim();
+      }
+
+      // ========== VALIDAÇÃO DE TELEFONES ==========
+      if (updateData.contacts) {
+        const { phone, emergency_contact } = updateData.contacts;
+
+        // Função para validar e formatar telefone brasileiro
+        const validatePhone = (phoneNumber) => {
+          if (!phoneNumber) return null;
+
+          // Remove tudo que não é número
+          const cleanPhone = phoneNumber.replace(/\D/g, "");
+
+          if (cleanPhone.length === 11) {
+            // Celular com DDD
+            const ddd = cleanPhone.substring(0, 2);
+            const firstDigit = cleanPhone.charAt(2);
+
+            if (parseInt(ddd) < 11 || parseInt(ddd) > 99) {
+              return { valid: false, message: "DDD inválido" };
+            }
+
+            if (firstDigit !== "9") {
+              return {
+                valid: false,
+                message: "Número de celular deve começar com 9",
+              };
+            }
+
+            return {
+              valid: true,
+              formatted: `(${ddd}) ${cleanPhone.substring(2, 7)}-${cleanPhone.substring(7)}`,
+            };
+          } else if (cleanPhone.length === 10) {
+            // Telefone fixo com DDD
+            const ddd = cleanPhone.substring(0, 2);
+
+            if (parseInt(ddd) < 11 || parseInt(ddd) > 99) {
+              return { valid: false, message: "DDD inválido" };
+            }
+
+            return {
+              valid: true,
+              formatted: `(${ddd}) ${cleanPhone.substring(2, 6)}-${cleanPhone.substring(6)}`,
+            };
+          } else {
+            return {
+              valid: false,
+              message: "Telefone deve ter 10 (fixo) ou 11 dígitos (celular)",
+            };
+          }
+        };
+
+        // Validar telefone principal
+        if (phone) {
+          const phoneValidation = validatePhone(phone);
+          if (!phoneValidation.valid) {
+            return res.status(400).json({
+              error: `Telefone inválido: ${phoneValidation.message}`,
+            });
+          }
+          updateData.contacts.phone = phoneValidation.formatted;
+        }
+
+        // Validar telefone de emergência
+        if (emergency_contact) {
+          const emergencyValidation = validatePhone(emergency_contact);
+          if (!emergencyValidation.valid) {
+            return res.status(400).json({
+              error: `Telefone de emergência inválido: ${emergencyValidation.message}`,
+            });
+          }
+          updateData.contacts.emergency_contact = emergencyValidation.formatted;
+        }
+
+        // Manter outros campos de contacts
+        updateData.contacts = {
+          ...existingCustomer.contacts,
+          ...updateData.contacts,
+        };
+      }
+
+      // ========== UPLOAD DE AVATAR ==========
+      if (req.file) {
+        try {
+          // Upload nova imagem
+          const uploadResult = await uploadToCloudinary(req.file.buffer, {
+            public_id: `customer_${Date.now()}_${Math.random()
+              .toString(36)
+              .substr(2, 9)}`,
+          });
+
+          updateData.avatar = {
+            url: uploadResult.secure_url,
+            public_id: uploadResult.public_id,
+          };
+
+          // Deletar imagem antiga
+          if (existingCustomer?.avatar?.public_id) {
+            await cloudinary.uploader.destroy(
+              existingCustomer.avatar.public_id
+            );
+          }
+        } catch (uploadError) {
+          console.error("Erro no upload do avatar:", uploadError);
+          return res.status(500).json({
+            error: "Erro ao fazer upload da imagem",
+          });
+        }
+      }
+
+      // ========== ATUALIZAR CLIENTE ==========
+      const updatedCustomer = await Customer.findByIdAndUpdate(id, updateData, {
+        new: true,
+        runValidators: true,
+      })
+        .select("-password")
+        .populate("patient_of", "name email");
+
+      res.json({
+        message: "Perfil atualizado com sucesso",
+        customer: updatedCustomer,
+      });
+    } catch (error) {
+      console.error("Erro ao atualizar perfil:", error);
+
+      if (error.name === "ValidationError") {
+        const validationErrors = Object.values(error.errors).map(
+          (err) => err.message
+        );
+        return res.status(400).json({
+          error: "Dados inválidos",
+          details: validationErrors,
+        });
+      }
+
+      if (error.code === 11000) {
+        return res.status(400).json({
+          error: "Email já está em uso",
+        });
+      }
+
+      res.status(500).json({ error: "Erro ao atualizar perfil" });
+    }
+  },
 
   // Deletar cliente
   async deleteCustomer(req, res) {
