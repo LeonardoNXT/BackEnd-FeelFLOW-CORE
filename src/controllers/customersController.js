@@ -1358,7 +1358,7 @@ const customersController = {
       res.json({
         customer_name: customer.name,
         mood_diary: customer.mood_diary.sort(
-          (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+          (a, b) => new Date(a.createdAt) - new Date(b.createdAt)
         ),
         total_entries: customer.mood_diary.length,
       });
