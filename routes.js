@@ -195,7 +195,7 @@ route.patch(
 route.patch(
   "/appointments/complete",
   checkToken,
-  authorize("employee"),
+  authorize("employee", "patient"),
   appointmentsController.completeAppointment
 );
 

@@ -17,7 +17,6 @@ const {
 } = require("./logic/generateAppointmentPDF");
 const timezoneHelper = require("./logic/timezoneHelper");
 
-
 const INTERNAL_ERROR_CONFIG = {
   status: 500,
   error: "Erro interno",
@@ -110,14 +109,14 @@ const appointmentsController = {
       const start = new Date(startTime);
       const end = new Date(start.getTime() + duration * 60000);
 
-     const validation = timezoneHelper.validateBusinessHours(start, end);
-        if (!validation.valid) {
-          return errorHelper({
+      const validation = timezoneHelper.validateBusinessHours(start, end);
+      if (!validation.valid) {
+        return errorHelper({
           res,
           ...VALIDATE_ERROR_CONFIG,
           message: validation.error,
         });
-        }
+      }
 
       // Verifica se já existe conflito de horário
       const conflict = await Appointment.findOne({
@@ -251,16 +250,16 @@ const appointmentsController = {
       const newStart = new Date(newStartTime);
       const newEnd = new Date(newStart.getTime() + newDuration * 60000);
 
-timezoneHelper.logTimeDebug(newStart, newEnd, 'UPDATE AVAILABILITY');
+      timezoneHelper.logTimeDebug(newStart, newEnd, "UPDATE AVAILABILITY");
 
-const validation = timezoneHelper.validateBusinessHours(newStart, newEnd);
-if (!validation.valid) {
-  return errorHelper({
-    res,
-    ...VALIDATE_ERROR_CONFIG,
-    message: validation.error,
-  });
-}
+      const validation = timezoneHelper.validateBusinessHours(newStart, newEnd);
+      if (!validation.valid) {
+        return errorHelper({
+          res,
+          ...VALIDATE_ERROR_CONFIG,
+          message: validation.error,
+        });
+      }
 
       // Verifica se há conflito com outros horários do mesmo psicólogo
       const conflict = await Appointment.findOne({
@@ -306,7 +305,12 @@ if (!validation.valid) {
         id,
         role,
         GET_APPOINTMENTS_CONFIG,
-        { status: "cancelado" }
+        { status: "cancelado" },
+        [
+          { path: "createdBy", select: "name avatar" }, // ✅ Adicionar populate
+          { path: "intendedFor", select: "name avatar" },
+          { path: "organization", select: "name avatar" },
+        ]
       );
 
       res.status(200).json({
@@ -515,30 +519,27 @@ if (!validation.valid) {
     const now = new Date();
 
     try {
-      if (role == "employee") {
-        existing = await Appointment.find({
-          createdBy: userId,
+      const appointments = await GetAppointments(
+        Appointment,
+        userId,
+        role,
+        GET_APPOINTMENTS_CONFIG,
+        {
           status: "agendado",
           startTime: { $gt: now },
-        })
-          .populate("intendedFor", "name avatar")
-          .sort({ date: 1 });
-      }
-      if (role == "patient") {
-        existing = await Appointment.find({
-          intendedFor: userId,
-          status: "agendado",
-          startTime: { $gt: now },
-        })
-          .populate("createdBy", "name avatar")
-          .sort({ date: 1 });
-      }
+        },
+        [
+          { path: "createdBy", select: "name avatar" }, // ✅ Adicionar
+          { path: "intendedFor", select: "name avatar" },
+          { path: "organization", select: "name avatar" },
+        ]
+      );
 
       res.status(200).json({
         message: "Os agendamentos confirmados foram listados com sucesso.",
-        appointments: existing,
+        appointments,
       });
-    } catch (er) {
+    } catch (err) {
       console.log(err);
       errorHelper({ res, ...INTERNAL_ERROR_CONFIG });
     }
@@ -670,22 +671,11 @@ if (!validation.valid) {
         userId,
         role,
         GET_APPOINTMENTS_CONFIG,
-        {
-          status: "concluido",
-        },
+        { status: "concluido" },
         [
-          {
-            path: "intendedFor",
-            select: "name avatar",
-          },
-          {
-            path: "createdBy",
-            select: "name avatar",
-          },
-          {
-            path: "organization",
-            select: "name avatar",
-          },
+          { path: "intendedFor", select: "name avatar" }, // ✅ Popula ambos
+          { path: "createdBy", select: "name avatar" },
+          { path: "organization", select: "name avatar" },
         ]
       );
 
