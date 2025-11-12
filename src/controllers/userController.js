@@ -3,7 +3,37 @@ const User = require("../models/User");
 const jwt = require("jsonwebtoken");
 const Organization = require("../models/Organization");
 const Employee = require("../models/Employee");
-const Customer = require("../models/Customer");
+const cloudinary = require("cloudinary").v2;
+
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+
+const uploadToCloudinary = (buffer, options = {}) => {
+  return new Promise((resolve, reject) => {
+    const uploadOptions = {
+      resource_type: "image",
+      folder: "organizations/avatars",
+      transformation: [
+        { width: 400, height: 400, crop: "fill", gravity: "face" },
+        { quality: "auto", fetch_format: "auto" },
+      ],
+      ...options,
+    };
+
+    cloudinary.uploader
+      .upload_stream(uploadOptions, (error, result) => {
+        if (error) {
+          reject(error);
+        } else {
+          resolve(result);
+        }
+      })
+      .end(buffer);
+  });
+};
 
 // Obter dados do usuário autenticado
 exports.meUser = async (req, res) => {
@@ -38,6 +68,248 @@ exports.meUser = async (req, res) => {
   } catch (error) {
     console.error(error);
     return res.status(500).json({ msg: "Erro ao buscar usuário." });
+  }
+};
+
+const deleteFromCloudinary = (publicId) => {
+  return new Promise((resolve, reject) => {
+    cloudinary.uploader.destroy(publicId, (error, result) => {
+      if (error) {
+        reject(error);
+      } else {
+        resolve(result);
+      }
+    });
+  });
+};
+
+exports.updateOrganization = async (req, res) => {
+  try {
+    const organizationId = req.user.id;
+    const { name, email, cnpj, telefone, password, confirmPassword } = req.body;
+
+    // Busca a organização
+    const organization =
+      await Organization.findById(organizationId).select("+password");
+
+    if (!organization) {
+      return res.status(404).json({ msg: "Organização não encontrada." });
+    }
+
+    // Objeto para armazenar os campos a serem atualizados
+    const updateFields = {};
+
+    // Validação e atualização do nome
+    if (name !== undefined) {
+      if (!name || name.trim().length === 0) {
+        return res.status(422).json({ msg: "O nome não pode estar vazio." });
+      }
+      if (name.trim().length < 3) {
+        return res
+          .status(422)
+          .json({ msg: "O nome deve ter pelo menos 3 caracteres." });
+      }
+      updateFields.name = name.trim();
+    }
+
+    // Validação e atualização do email
+    if (email !== undefined) {
+      if (!email || email.trim().length === 0) {
+        return res.status(422).json({ msg: "O email não pode estar vazio." });
+      }
+
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        return res.status(422).json({ msg: "Formato de email inválido." });
+      }
+
+      // Verifica se o email já está sendo usado por outra organização
+      const emailExists = await Organization.findOne({
+        email: email.toLowerCase().trim(),
+        _id: { $ne: organizationId },
+      });
+
+      if (emailExists) {
+        return res
+          .status(422)
+          .json({ msg: "Este email já está sendo utilizado." });
+      }
+
+      updateFields.email = email.toLowerCase().trim();
+    }
+
+    // Validação e atualização do CNPJ
+    if (cnpj !== undefined) {
+      if (cnpj && cnpj.trim().length > 0) {
+        // Remove caracteres não numéricos
+        const cnpjClean = cnpj.replace(/[^\d]/g, "");
+
+        if (cnpjClean.length !== 14) {
+          return res.status(422).json({ msg: "CNPJ deve conter 14 dígitos." });
+        }
+
+        updateFields.cnpj = cnpj.trim();
+      } else {
+        updateFields.cnpj = "";
+      }
+    }
+
+    // Validação e atualização do telefone
+    if (telefone !== undefined) {
+      if (telefone && telefone.trim().length > 0) {
+        const telefoneClean = telefone.replace(/[^\d]/g, "");
+
+        if (telefoneClean.length < 10 || telefoneClean.length > 11) {
+          return res
+            .status(422)
+            .json({ msg: "Telefone inválido. Deve conter 10 ou 11 dígitos." });
+        }
+
+        updateFields.telefone = telefone.trim();
+      } else {
+        updateFields.telefone = "";
+      }
+    }
+
+    // Validação e atualização da senha
+    if (password !== undefined) {
+      if (!password || password.trim().length === 0) {
+        return res.status(422).json({ msg: "A senha não pode estar vazia." });
+      }
+
+      if (password.length < 6) {
+        return res
+          .status(422)
+          .json({ msg: "A senha deve ter pelo menos 6 caracteres." });
+      }
+
+      if (password !== confirmPassword) {
+        return res.status(422).json({ msg: "As senhas não coincidem." });
+      }
+
+      // Criptografa a nova senha
+      const salt = await bcrypt.genSalt(
+        Number(process.env.BCRYPT_SALT_ROUNDS) || 12
+      );
+      updateFields.password = await bcrypt.hash(password, salt);
+    }
+
+    // Se não houver campos para atualizar
+    if (Object.keys(updateFields).length === 0) {
+      return res
+        .status(400)
+        .json({ msg: "Nenhum campo válido para atualizar." });
+    }
+
+    // Atualiza a organização
+    const updatedOrganization = await Organization.findByIdAndUpdate(
+      organizationId,
+      { $set: updateFields },
+      { new: true, runValidators: true }
+    ).select("-password");
+
+    return res.status(200).json({
+      msg: "Dados atualizados com sucesso.",
+      organization: updatedOrganization,
+    });
+  } catch (error) {
+    console.error("Erro ao atualizar organização:", error);
+    return res.status(500).json({
+      msg: "Erro ao atualizar os dados. Tente novamente mais tarde.",
+    });
+  }
+};
+
+exports.updateOrganizationAvatar = async (req, res) => {
+  try {
+    const organizationId = req.user.id;
+
+    // Verifica se um arquivo foi enviado
+    if (!req.file) {
+      return res.status(400).json({ msg: "Nenhuma imagem foi enviada." });
+    }
+
+    // Busca a organização
+    const organization = await Organization.findById(organizationId);
+
+    if (!organization) {
+      return res.status(404).json({ msg: "Organização não encontrada." });
+    }
+
+    // Se já existe um avatar, deleta o anterior do Cloudinary
+    if (organization.avatar && organization.avatar.public_id) {
+      try {
+        await deleteFromCloudinary(organization.avatar.public_id);
+      } catch (deleteError) {
+        console.error("Erro ao deletar avatar anterior:", deleteError);
+        // Continua mesmo se falhar ao deletar a imagem antiga
+      }
+    }
+
+    // Faz upload da nova imagem
+    const uploadResult = await uploadToCloudinary(req.file.buffer, {
+      folder: "organizations/avatars",
+    });
+
+    // Atualiza o avatar na organização
+    organization.avatar = {
+      url: uploadResult.secure_url,
+      public_id: uploadResult.public_id,
+    };
+
+    await organization.save();
+
+    return res.status(200).json({
+      msg: "Avatar atualizado com sucesso.",
+      avatar: organization.avatar,
+    });
+  } catch (error) {
+    console.error("Erro ao atualizar avatar:", error);
+    return res.status(500).json({
+      msg: "Erro ao atualizar o avatar. Tente novamente mais tarde.",
+    });
+  }
+};
+
+exports.removeOrganizationAvatar = async (req, res) => {
+  try {
+    const organizationId = req.user.id;
+
+    // Busca a organização
+    const organization = await Organization.findById(organizationId);
+
+    if (!organization) {
+      return res.status(404).json({ msg: "Organização não encontrada." });
+    }
+
+    // Verifica se existe um avatar
+    if (!organization.avatar || !organization.avatar.public_id) {
+      return res.status(400).json({ msg: "Nenhum avatar para remover." });
+    }
+
+    // Deleta a imagem do Cloudinary
+    try {
+      await deleteFromCloudinary(organization.avatar.public_id);
+    } catch (deleteError) {
+      console.error("Erro ao deletar avatar do Cloudinary:", deleteError);
+    }
+
+    // Remove o avatar da organização
+    organization.avatar = {
+      url: "",
+      public_id: "",
+    };
+
+    await organization.save();
+
+    return res.status(200).json({
+      msg: "Avatar removido com sucesso.",
+    });
+  } catch (error) {
+    console.error("Erro ao remover avatar:", error);
+    return res.status(500).json({
+      msg: "Erro ao remover o avatar. Tente novamente mais tarde.",
+    });
   }
 };
 

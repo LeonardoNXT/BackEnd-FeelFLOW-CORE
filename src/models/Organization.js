@@ -7,6 +7,26 @@ const organizationSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
+    cnpj: {
+      type: String,
+      required: false,
+      trim: true,
+    },
+    telefone: {
+      type: String,
+      required: false,
+      trim: true,
+    },
+    avatar: {
+      url: {
+        type: String,
+        required: false,
+      },
+      public_id: {
+        type: String,
+        required: false,
+      },
+    },
     email: {
       type: String,
       required: true,

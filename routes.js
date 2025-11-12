@@ -28,6 +28,30 @@ route.get("/", (req, res) => {
   res.send("Bem vindo a NewArchAPI!");
 });
 
+// -- ADM -- //
+
+route.patch(
+  "/organization",
+  checkToken,
+  authorize("adm"),
+  userController.updateOrganization
+);
+
+route.patch(
+  "/organization/avatar",
+  checkToken,
+  authorize("adm"),
+  upload.single("avatar"),
+  userController.updateOrganizationAvatar
+);
+
+route.delete(
+  "/organization/avatar",
+  checkToken,
+  authorize("adm"),
+  userController.removeOrganizationAvatar
+);
+
 // ---- Notificações ---- //
 
 route.post(
@@ -195,7 +219,7 @@ route.patch(
 route.patch(
   "/appointments/complete",
   checkToken,
-  authorize("employee", "patient"),
+  authorize("employee"),
   appointmentsController.completeAppointment
 );
 
