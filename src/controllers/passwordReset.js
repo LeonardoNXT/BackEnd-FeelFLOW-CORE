@@ -1,12 +1,11 @@
-const Password = require("../models/PasswordResetFlow");
 const Organization = require("../models/Organization");
 const Employee = require("../models/Employee");
 const Customer = require("../models/Customer");
 const crypto = require("crypto");
-const bcrypt = require("bcrypt");
 const ErrorHelper = require("./logic/errorHelper");
 const sendOtpEmail = require("./logic/sendOtpEmail");
 const { Redis } = require("@upstash/redis");
+const bcrypt = require("bcrypt");
 
 const redis = new Redis({
   url: process.env.UPSTASH_REDIS_REST_URL,
@@ -20,11 +19,11 @@ function getCookieOptions() {
 
   return {
     httpOnly: true,
-    secure: true, // HTTPS obrigatório em produção
-    sameSite: isProd ? "Strict" : "none", // Mais restritivo em produção
+    secure: true,
+    sameSite: "strict",
     domain: isProd ? ".feelsystem.com.br" : undefined, // Aplica subdomínio apenas em prod
     maxAge: 10 * 60 * 1000, // 10 minutos
-    path: "/auth/reset-password",
+    path: "/",
   };
 }
 
@@ -95,6 +94,8 @@ const passwordResetController = {
       );
 
       await sendOtpEmail({ email: email, otp: token, name: user.name });
+
+      console.log("[------] TOKEN [------]", token);
 
       return res.json({ name: user.name.split(" ")[0] });
     } catch (err) {
@@ -180,6 +181,123 @@ const passwordResetController = {
       res.cookie("reset_token", resetToken, getCookieOptions());
 
       return res.status(200).json({ verified: true });
+    } catch (err) {
+      console.error(err);
+      return ErrorHelper({
+        res,
+        status: 500,
+        error: "Erro interno.",
+        message: "Tente novamente mais tarde.",
+      });
+    }
+  },
+  async resetPassword(req, res) {
+    const { newPassword } = req.body;
+    const resetToken = req.cookies.reset_token;
+
+    // VALIDAÇÕES
+    if (!resetToken) {
+      return ErrorHelper({
+        res,
+        status: 401,
+        error: "Token não encontrado.",
+        message: "Inicie o processo de recuperação novamente.",
+      });
+    }
+
+    if (!newPassword) {
+      return ErrorHelper({
+        res,
+        status: 400,
+        error: "Senha não fornecida.",
+        message: "Envie uma senha válida.",
+      });
+    }
+
+    // ✅ VALIDAÇÃO DE SENHA FORTE
+    const passwordRegex =
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#])[A-Za-z\d@$!%*?&#]{8,}$/;
+
+    if (!passwordRegex.test(newPassword)) {
+      return ErrorHelper({
+        res,
+        status: 400,
+        error: "Senha fraca.",
+        message:
+          "A senha deve ter no mínimo 8 caracteres, incluindo: 1 letra maiúscula, 1 número e 1 caractere especial (@$!%*?&#).",
+      });
+    }
+
+    try {
+      // HASH DO TOKEN RECEBIDO
+      const resetTokenHash = crypto
+        .createHash("sha256")
+        .update(resetToken)
+        .digest("hex");
+
+      // BUSCAR DADOS NO REDIS (procura por qualquer chave que comece com reset-flow:)
+      const keys = await redis.keys("reset-flow:*");
+
+      let flowData = null;
+      let userEmail = null;
+
+      // VERIFICAR QUAL CHAVE TEM O HASH CORRETO
+      for (const key of keys) {
+        const data = await redis.get(key);
+        if (data && data.resetTokenHash === resetTokenHash) {
+          flowData = data;
+          userEmail = key.replace("reset-flow:", "");
+          break;
+        }
+      }
+
+      if (!flowData) {
+        return ErrorHelper({
+          res,
+          status: 401,
+          error: "Token expirado ou inválido.",
+          message: "Inicie o processo de recuperação novamente.",
+        });
+      }
+
+      // BUSCAR USUÁRIO NO BANCO
+      const Model = models[flowData.role];
+      if (!Model) {
+        return ErrorHelper({
+          res,
+          status: 400,
+          error: "Tipo de usuário inválido.",
+          message: "Erro ao processar requisição.",
+        });
+      }
+
+      const user = await Model.findById(flowData.userId);
+      if (!user) {
+        return ErrorHelper({
+          res,
+          status: 404,
+          error: "Usuário não encontrado.",
+          message: "Usuário pode ter sido removido do sistema.",
+        });
+      }
+
+      // HASH DA NOVA SENHA
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+      // ATUALIZAR SENHA
+      user.password = hashedPassword;
+      await user.save();
+
+      // LIMPAR REDIS E COOKIE
+      await redis.del(`reset-flow:${userEmail}`);
+      await redis.del(`reset:${userEmail}`);
+
+      res.clearCookie("reset_token", getCookieOptions());
+
+      return res.status(200).json({
+        success: true,
+        message: "Senha alterada com sucesso!",
+      });
     } catch (err) {
       console.error(err);
       return ErrorHelper({

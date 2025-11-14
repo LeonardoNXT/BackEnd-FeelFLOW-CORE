@@ -569,6 +569,12 @@ route.post(
   forgotPasswordController.codeVerification
 );
 
+route.post(
+  "/auth/reset-password",
+  rateLimit,
+  forgotPasswordController.resetPassword
+);
+
 // logout //'
 
 route.post("/logout", (req, res) => {
