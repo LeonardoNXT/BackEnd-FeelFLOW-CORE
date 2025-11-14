@@ -3,6 +3,7 @@ const User = require("../models/User");
 const jwt = require("jsonwebtoken");
 const Organization = require("../models/Organization");
 const Employee = require("../models/Employee");
+const Customer = require("../models/Customer");
 const cloudinary = require("cloudinary").v2;
 
 cloudinary.config({
