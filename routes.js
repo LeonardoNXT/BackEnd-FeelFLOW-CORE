@@ -9,6 +9,7 @@ const customersController = require("./src/controllers/customersController");
 const appointmentsController = require("./src/controllers/appointmentsController");
 const tasksController = require("./src/controllers/tasksController");
 const summariesController = require("./src/controllers/summaryController");
+const forgotPasswordController = require("./src/controllers/passwordReset");
 const {
   getAccountsMetrics,
   getMoodMetrics,
@@ -552,6 +553,10 @@ route.post("/ai/chat", checkToken, iaController.chatWithAI);
 route.use(handleMulterError);
 
 module.exports = route;
+
+// - RESET PASSWORD - //
+
+route.post("/auth/forgot-password", forgotPasswordController.emailVerification);
 
 // logout //'
 

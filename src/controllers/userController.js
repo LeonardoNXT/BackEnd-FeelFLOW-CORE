@@ -55,6 +55,8 @@ exports.meUser = async (req, res) => {
         break;
     }
 
+    console.log(user);
+
     if (!user) {
       return res.status(404).json({ msg: "O usuário não foi encontrado." });
     }
