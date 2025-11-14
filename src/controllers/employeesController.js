@@ -303,7 +303,7 @@ const employeesController = {
       const cookieConfig = {
         httpOnly: true,
         secure: true, // Obrigatório com SameSite=None
-        sameSite: "None",
+        sameSite: "strict",
         path: "/",
         maxAge: 1000 * 60 * 60 * 24 * 7, // exemplo: 7 dias
       };

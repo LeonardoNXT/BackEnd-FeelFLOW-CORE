@@ -10,6 +10,7 @@ const appointmentsController = require("./src/controllers/appointmentsController
 const tasksController = require("./src/controllers/tasksController");
 const summariesController = require("./src/controllers/summaryController");
 const forgotPasswordController = require("./src/controllers/passwordReset");
+const rateLimit = require("./src/middlewares/rateLimit");
 const {
   getAccountsMetrics,
   getMoodMetrics,
@@ -556,7 +557,17 @@ module.exports = route;
 
 // - RESET PASSWORD - //
 
-route.post("/auth/forgot-password", forgotPasswordController.emailVerification);
+route.post(
+  "/auth/forgot-password",
+  rateLimit,
+  forgotPasswordController.emailVerification
+);
+
+route.post(
+  "/auth/verify-code",
+  rateLimit,
+  forgotPasswordController.codeVerification
+);
 
 // logout //'
 

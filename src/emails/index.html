@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="color-scheme" content="light" />
+    <title>FeelSystem - Código OTP</title>
+
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+
+      body {
+        margin: 0;
+        padding: 0;
+        background-color: #ffffff;
+        font-family:
+          "Inter",
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          Roboto,
+          Helvetica,
+          Arial,
+          sans-serif;
+        color: #000;
+      }
+
+      table {
+        border-collapse: collapse;
+      }
+
+      .container {
+        width: 100%;
+        padding: 40px 0;
+      }
+
+      .content {
+        width: 100%;
+        max-width: 520px;
+        margin: 0 auto;
+        padding: 0 20px;
+      }
+      .logo-content {
+        margin-block: 20px;
+      }
+      .logo {
+        text-align: center;
+        margin-bottom: 12px;
+      }
+
+      .title {
+        font-size: 24px;
+        font-weight: 700;
+        margin-bottom: 24px;
+        text-align: left;
+        line-height: 1.2;
+      }
+
+      .code-box {
+        width: 100%;
+        background: #f2f2f2;
+        padding: 24px 0;
+        text-align: center;
+        font-size: 36px;
+        font-weight: 700;
+        border-radius: 12px;
+        margin-bottom: 32px;
+        letter-spacing: 4px;
+      }
+
+      .text {
+        font-size: 15px;
+        line-height: 1.6;
+        margin-bottom: 24px;
+        color: #333;
+      }
+
+      .footer-logo {
+        margin-top: 50px;
+        text-align: center;
+        opacity: 0.8;
+      }
+
+      .divider {
+        width: 100%;
+        height: 1px;
+        background: #e5e5e5;
+        margin: 40px 0;
+      }
+
+      a {
+        color: #0078ff;
+        text-decoration: none;
+      }
+    </style>
+  </head>
+
+  <body>
+    <table width="100%" class="container">
+      <tr>
+        <td align="center">
+          <table class="content">
+            <!-- Logo -->
+            <tr>
+              <td class="logo">
+                <img
+                  src="https://feelsystem.vercel.app/app.png"
+                  width="40"
+                  alt="FeelSystem"
+                  class="logo-content"
+                />
+              </td>
+            </tr>
+
+            <!-- Título -->
+            <tr>
+              <td class="title">
+                Seu código de Autenticação de<br />Dois Fatores:
+              </td>
+            </tr>
+
+            <!-- Código OTP -->
+            <tr>
+              <td>
+                <div class="code-box">{{OTP}}</div>
+              </td>
+            </tr>
+
+            <!-- Texto -->
+            <tr>
+              <td class="text">Olá, {{NOME}},</td>
+            </tr>
+
+            <tr>
+              <td class="text">
+                Você tentou recentemente fazer login a partir de um novo
+                dispositivo, navegador ou local. Para concluir seu login, use o
+                código acima.
+              </td>
+            </tr>
+
+            <tr>
+              <td class="text">
+                Se não foi você, <a href="#">altere sua senha imediatamente</a>.
+              </td>
+            </tr>
+
+            <tr>
+              <td class="text">
+                Cordialmente,<br />
+                Equipe FeelSystem
+              </td>
+            </tr>
+
+            <!-- Divider -->
+            <tr>
+              <td><div class="divider"></div></td>
+            </tr>
+
+            <!-- Footer -->
+            <tr>
+              <td class="footer-logo">
+                <img
+                  src="https://feelsystem.vercel.app/app.png"
+                  width="40"
+                  alt="FeelSystem"
+                />
+                <br /><br />
+                © 2025 FeelSystem. Todos os direitos reservados.
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>
